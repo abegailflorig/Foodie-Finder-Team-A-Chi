@@ -1,29 +1,16 @@
 # Foodie Finder (Team A - Chi)
 
-This project is built with **React + Vite**.
+The Foodie Finder application is a web and mobile platform designed to help users easily discover nearby restaurants and dining spots.
 
-## Overview
-Foodie Finder is a web app designed to help users discover nearby restaurants, cafes, and food spots.  
-It aims to provide a user-friendly experience for food lovers to find, review, and share their favorite places.
 
 ---
 
 ## Tech Stack
-- **React + Vite** for fast frontend development
-- **Supabase** for authentication and database
-- **Tailwind CSS** for styling
-- **React Router** for navigation
-
----
-
-## Development Notes
-This template provides a minimal setup to get React working in Vite with HMR and ESLint rules.
-
-Currently, two official plugins are available:
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc)
-
-If you want to enable the React Compiler, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React** – For building dynamic and responsive UI components  
+- **Tailwind CSS** – For fast, modern, and responsive styling  
+- **Supabase** – For backend services (authentication, database, and storage)  
+- **Git + GitHub** – For version control and collaboration  
+- **Google Maps API** – For displaying interactive maps and location-based search  
 
 ---
 
