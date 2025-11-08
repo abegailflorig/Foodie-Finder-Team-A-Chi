@@ -1,16 +1,34 @@
-# React + Vite
+# Foodie Finder (Team A - Chi)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is built with **React + Vite**.
+
+## Overview
+Foodie Finder is a web app designed to help users discover nearby restaurants, cafes, and food spots.  
+It aims to provide a user-friendly experience for food lovers to find, review, and share their favorite places.
+
+---
+
+## Tech Stack
+- **React + Vite** for fast frontend development
+- **Supabase** for authentication and database
+- **Tailwind CSS** for styling
+- **React Router** for navigation
+
+---
+
+## Development Notes
+This template provides a minimal setup to get React working in Vite with HMR and ESLint rules.
 
 Currently, two official plugins are available:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+If you want to enable the React Compiler, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting Started
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/abegailflorig/foodie-finder-team-a-chi.git
