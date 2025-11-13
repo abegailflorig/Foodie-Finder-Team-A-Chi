@@ -4,7 +4,7 @@ export default function DetailsPage() {
   return (
     <div className="flex flex-col h-screen bg-white relative overflow-hidden">
       {/* Yellow Header Shape */}
-      <div className="bg-[#FFC533] h-50 w-5/14 mx-auto mt-6 rounded-t-3xl rounded-b-none shadow-md"></div>
+      <div className="bg-[#FFC533] h-60 w-5/14 mx-auto mt-6 rounded-t-3xl rounded-b-none shadow-md"></div>
 
       {/* Key Ingredients Section */}
       <div className="mt-6 px-6">
