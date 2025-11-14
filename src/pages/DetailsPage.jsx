@@ -1,10 +1,39 @@
-import { House, MapPin, Heart, CircleUserRound} from "lucide-react";
+import { House, MapPin, Heart, CircleUserRound } from "lucide-react";
 
 export default function DetailsPage() {
   return (
-    <div className="flex flex-col h-screen bg-white relative overflow-hidden">
-      {/* Yellow Header Shape */}
-      <div className="bg-[#FFC533] h-60 w-5/14 mx-auto mt-6 rounded-t-3xl rounded-b-none shadow-md"></div>
+    <div className="flex flex-col min-h-screen bg-white relative overflow-hidden">
+
+      {/* YELLOW HEADER WITH CONTENT INSIDE */}
+      <div className="bg-[#FFC533] w-3/6 mx-auto mt-20 rounded-t-[70px] shadow-md relative px-6 pt-10 pb-16 flex flex-col items-center">
+
+        {/* FOOD IMAGE */}
+        <img
+          src="../Recommend Food/Kinilaw na Tuna.png"
+          alt="Kinilaw na Tuna"
+          className="w-52 h-56 object-contain mt-[-140px]"
+        />
+
+        {/* TEXT CONTENT */}
+        <div className="w-full max-w-[360px] text-left">
+
+          {/* FOOD NAME */}
+          <p className="text-[34px] font-semibold style-neuton text-black leading-tight">
+            Kinilaw na Tuna
+          </p>
+
+          {/* RESTAURANT NAME */}
+          <p className="text-[18px] text-gray-700 style-poppins -mt-2 ml-10">
+            - Tuna Express Restaurant
+          </p>
+
+          {/* PRICE + STAR RATING */}
+          <div className="flex items-start justify-between mt-3 pr-10">
+            <p className="text-[28px] font-bold text-gray-900 mt-10">₱180</p>
+            <p className="text-yellow-600 text-xl font-semibold mb-1">⭐⭐⭐⭐☆</p>
+          </div>
+        </div>
+      </div>
 
       {/* Key Ingredients Section */}
       <div className="mt-6 px-6">
@@ -22,13 +51,9 @@ export default function DetailsPage() {
       {/* Our Product Section */}
       <div className="mt-6 px-6 flex flex-col">
         <h2 className="font-semibold text-gray-800 mb-3">Our Product</h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((item) => (
-            <div
-              key={item}
-              className="bg-gray-200 h-28 rounded-xl shadow-md"
-            ></div>
+        <div className="grid grid-cols-2 gap-4 pb-24">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
+            <div key={item} className="bg-gray-200 h-28 rounded-xl shadow-md"></div>
           ))}
         </div>
       </div>

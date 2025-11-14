@@ -1,1 +1,8 @@
 @import "tailwindcss";
+.style-neuton {
+  font-family: 'Neuton', serif;
+}
+
+.style-poppins {
+  font-family: 'Poppins', sans-serif;
+}

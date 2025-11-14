@@ -12,40 +12,40 @@ export default function LoginPage() {
         <img src="/secondary-logo.png" alt="Foodie Finder" className="w-38 h-40 mb-6" />
 
         {/* Tabs */}
-        <div className="flex items-center justify-center gap-10 text-black font-medium mb-6">
+        <div className="flex items-center justify-center gap-10 text-black font-regular text-xl style-neuton mb-6">
         <button className="pb-1 border-b-2 border-white text-white">Login</button>
         <div className="w-px h-10 bg-black mx-2"></div>
         <button className="pb-1 border-b-2 border-transparent text-black">Signup</button>
         </div>
 
         {/* Form + Button Section */}
-        <div className="flex flex-col items-center w-full ">
+        <div className="flex flex-col items-center w-full font-regular text-xl style-neuton ">
         {/* Form Card */}
         <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md border border-[#FFC533] flex flex-col items-center ">
             <input
             type="email"
             className="w-full mb-6 px-5 py-3 rounded-full border border-[#FFC533] shadow-xl focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            placeholder="Email"
+            placeholder="Email:"
             />
             <input
             type="password"
             className="w-full mb-2 px-5 py-3 rounded-full border border-[#FFC533] shadow-xl focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            placeholder="Password"
+            placeholder="Password:"
             />
         </div>
 
         {/* Login Button*/}
-        <button className="w-50 bg-[#FFC533]  rounded-full border border-[#CFB53C] shadow-xl mt-6 py-2 px-2  font-medium hover:bg-yellow-500 transition">
+        <button className="w-50 bg-[#FFC533]  rounded-full border border-[#CFB53C] shadow-xl mt-6 py-2 px-2  font-regular text-xl style-neuton hover:bg-[#CFB53C] transition">
             Login
         </button>
         </div>
 
         {/* Social Buttons */}
-        <div className="flex flex-col gap-3 w-full max-w-md mt-6">
-        <button className="flex items-center justify-center gap-2 bg-[#FFC533] border-[#CFB53C] shadow-xl py-3 rounded-full border font-medium hover:bg-yellow-500 transition">
+        <div className="flex flex-col gap-3 w-full max-w-md mt-6 font-regular text-xl style-neuton">
+        <button className="flex items-center justify-center gap-5 bg-[#FFC533] border-[#CFB53C] shadow-xl py-2 rounded-full border hover:bg-[#CFB53C] transition">
             <FaFacebookF /> Continue w/ Facebook
         </button>
-        <button className="flex items-center justify-center gap-2 bg-[#FFC533] border-[#CFB53C] shadow-xl py-3 rounded-full border font-medium hover:bg-yellow-500 transition">
+        <button className="flex items-center justify-center gap-5 bg-[#FFC533] border-[#CFB53C] shadow-xl py-2 rounded-full border  hover:bg-[#CFB53C] transition">
             <FaGoogle />  Continue w/ Google
         </button>
         </div>

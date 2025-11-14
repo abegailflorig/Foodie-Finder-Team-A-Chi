@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import HomePage from "./pages/HomePage";
 import DetailsPage from "./pages/DetailsPage";
+import CategoriesPage from "./pages/CategoriesPage";
 
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/homepage" element={<HomePage />} />
         <Route path="/detailspage" element={<DetailsPage />} />
+        <Route path="/categoriespage" element={<CategoriesPage />} />
       </Routes>
     </Router>
   );

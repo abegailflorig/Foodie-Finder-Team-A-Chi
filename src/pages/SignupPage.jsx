@@ -12,13 +12,13 @@ export default function SignupPage() {
 
         {/* Tabs */}
         <div className="flex items-center justify-center gap-10 text-black font-medium mb-6">
-          <button className="pb-1 border-b-2 border-transparent text-black">Login</button>
+          <button className="pb-1 border-b-2 border-transparent text-black font-regular text-xl style-neuton">Login</button>
           <div className="w-px h-10 bg-black mx-2"></div>
-          <button className="pb-1 border-b-2 border-white text-white">Signup</button>
+          <button className="pb-1 border-b-2 border-white text-white font-regular text-xl style-neuton">Signup</button>
         </div>
 
         {/* Signup Form */}
-        <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md border border-[#FFC533]">
+        <div className="font-regular text-xl style-neuton bg-white rounded-3xl shadow-xl p-5 w-full max-w-md border border-[#FFC533]">
           <input
             type="text"
             className="w-full mb-4 px-5 py-3 rounded-full border border-[#FFC533] shadow-xl"
@@ -47,7 +47,7 @@ export default function SignupPage() {
         </div>
 
         {/* Signup Button */}
-        <div className="mt-2">
+        <div className="mt-2 font-regular text-xl style-neuton">
           <button className="w-56 bg-[#FCE8D8] rounded-full border border-[#FFC533] py-2  shadow-xl font-medium hover:bg-yellow-500 transition">
             Signup
           </button>

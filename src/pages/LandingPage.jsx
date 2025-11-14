@@ -15,12 +15,12 @@ export default function LandingPage() {
         />
 
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-headline font-normal">
+          <h1 className="text-4xl font-regular style-neuton">
             All your <br /> Favorite Foods
           </h1>
         </div>
 
-        <div className="mt-10 flex flex-col gap-4 w-60 font-secondary font-light">
+        <div className="mt-10 flex flex-col gap-4 w-60  style-neuton">
           <button className="border border-[#CFB53C] bg-[#FFC533] text-black py-2 rounded-full font-medium hover:bg-yellow-500 transition">
             Login
           </button>
