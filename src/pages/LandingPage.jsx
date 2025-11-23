@@ -3,10 +3,10 @@ import React from "react";
 export default function LandingPage() {
   return (
     <div className="relative flex flex-col items-center justify-center h-screen bg-white overflow-hidden">
-      {/* Top Yellow Header */}
+     
       <div className="absolute top-0 w-full h-1/2 bg-[#FFC533] rounded-b-3xl"></div>
 
-      {/* Main Content */}
+     
       <div className="flex flex-col items-center z-10 px-6 mt-62">
         <img
           src="/secondary-logo.png"

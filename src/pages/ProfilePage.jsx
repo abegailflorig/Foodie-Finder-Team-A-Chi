@@ -2,22 +2,23 @@ import { House, MapPin, Heart, CircleUserRound } from "lucide-react";
 
 export default function ProfilePage() {
   return (
-    <div className="w-full h-full bg-[#FFF9E8] overflow-y-auto font-sans pb-24">
+<div className="w-full min-h-screen bg-[#FFF9E8] overflow-y-auto font-sans pb-24">
       {/* HEADER */}
       <div className="bg-[#FFC533] h-48 rounded-b-3xl p-5 relative flex items-start">
         <button className="text-2xl">←</button>
       </div>
 
-      {/* PROFILE IMAGE */}
-      <div className="w-full flex justify-center -mt-16">
-        <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg">
-          <img
-            src="/profile.jpg" 
-            alt="Profile"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </div>
+    {/* PROFILE IMAGE */}
+<div className="w-full flex justify-center relative">
+  <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg -mt-14 z-10">
+    <img
+      src="/images/profile.jpg"
+      alt="profile"
+      className="w-full h-full object-cover"
+    />
+  </div>
+</div>
+
 
       {/* WHITE INFO CARD */}
       <div className="relative mx-6 mt-6 bg-white p-6 rounded-xl shadow-md border-l-[6px] border-[#FFC533]">
@@ -37,15 +38,15 @@ export default function ProfilePage() {
       </div>
 
       {/* LOGOUT BUTTON */}
-      <div className="w-full flex justify-center mt-8">
-        <button className="px-10 py-2 rounded-full bg-white shadow border border-gray-300 text-lg">
+      <div className="w-full flex justify-left mt-8 p-5">
+        <button className="px-10 py-2 rounded-full bg-[#FCE8D8] shadow border border-[#CFB53C] text-lg">
           Logout
         </button>
       </div>
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-yellow-300 rounded-t-3xl shadow-md flex justify-around items-center py-2">
-        <button className="text-yellow-500">
+       <button className="text-gray-500 hover:text-yellow-500 transition">
           <House size={22} />
         </button>
         <button className="text-gray-500 hover:text-yellow-500 transition">
@@ -54,7 +55,7 @@ export default function ProfilePage() {
         <button className="text-gray-500 hover:text-yellow-500 transition">
           <Heart size={22} />
         </button>
-        <button className="text-gray-500 hover:text-yellow-500 transition">
+       <button className="text-yellow-500">
           <CircleUserRound size={22} />
         </button>
       </div>
