@@ -12,7 +12,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white px-4 sm:px-6 pt-4 pb-28 sm:pb-24">
-      <p className="text-[26px] sm:text-[32px] font-regular style-neuton -mt-1 text-center sm:text-left">
+      <p className="text-[26px] sm:text-[32px] font-regular style-neuton -mt-1 text-left sm:text-left">
         Find your Favorites Food
       </p>
 
@@ -24,29 +24,37 @@ export default function CategoriesPage() {
         />
       </div>
 
-      {/* Categories Section */}
-      <div className="mt-6 flex flex-col">
-        <h2 className="text-2xl sm:text-3xl font-regular text-black-500 mb-2 style-neuton text-center sm:text-left">
-          Categories
-        </h2>
-        <div className="style-neuton flex justify-center gap-4 sm:gap-6 overflow-x-auto px-4 sm:px-6 w-full max-w-4xl pb-2">
-          {["BREAKFAST", "LUNCH", "DINNER"].map((category) => (
-            <div
-              key={category}
-              className="relative flex-shrink-0 bg-white border border-[#FFC533] rounded-full shadow-[0_4px_6px_-1px_rgba(207,181,60,0.5)] transition-transform hover:scale-105 w-[140px] sm:w-[180px] h-[60px] sm:h-[80px]"
-            >
-              <img
-                src={`/images/${category}.jpg`}
-                alt={category}
-                className="w-full h-full object-cover rounded-full opacity-90 blur-[1px]"
-              />
-              <span className="absolute inset-0 flex items-center justify-center font-bold text-sm sm:text-base text-black [text-shadow:_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white,_1px_1px_0_white]">
-                {category}
-              </span>
-            </div>
-          ))}
-        </div>
+    {/* Categories Section */}
+<div className="mt-6 flex flex-col">
+  <h2 className="text-2xl sm:text-3xl font-regular text-black-500 mb-2 style-neuton text-left sm:text-left">
+    Categories
+  </h2>
+
+  <div className="style-neuton flex justify-left gap-4 sm:gap-6 overflow-x-auto px-4 sm:px-6 w-full max-w-4xl pb-2">
+    {["BREAKFAST", "LUNCH", "DINNER"].map((category) => (
+      <div
+        key={category}
+        className="relative flex-shrink-0 bg-white border border-[#FFC533] rounded-full shadow-[0_4px_6px_-1px_rgba(207,181,60,0.5)] 
+        transition-transform hover:scale-105 
+        w-[110px] sm:w-[150px] 
+        h-[50px] sm:h-[60px]"
+      >
+        <img
+          src={`/images/${category}.jpg`}
+          alt={category}
+          className="w-full h-full object-cover rounded-full opacity-90 blur-[1px]"
+        />
+
+        <span className="absolute inset-0 flex items-center justify-center font-bold 
+        text-xs sm:text-sm text-black 
+        [text-shadow:_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white,_1px_1px_0_white]">
+          {category}
+        </span>
       </div>
+    ))}
+  </div>
+</div>
+
 
       {/* DISHES GRID */}
       <div className="grid grid-cols-2 mt-16 sm:mt-20 gap-x-4 sm:gap-x-6 gap-y-14 sm:gap-y-16">

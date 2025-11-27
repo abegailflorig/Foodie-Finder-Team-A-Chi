@@ -23,77 +23,70 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-
       {/* Header Section */}
-      <div className="bg-[#FFC533] h-80 rounded-b-3xl flex flex-col items-center justify-center p-4">
-        <div className="relative w-full md:w-10/12 h-60 md:h-62 rounded-2xl shadow-md overflow-hidden">
-          <img
-            src="/images/banner.jpg"
-            alt="Foodie Finder Banner"
-            className="w-full h-full object-cover"
-          />
+      <div className="bg-[#FFC533] h-64 sm:h-80 rounded-b-3xl flex flex-col items-center justify-center p-4">
+        <div className="relative w-11/12 sm:w-10/12 h-48 sm:h-62 rounded-2xl shadow-md overflow-hidden">
+          <img src="/images/banner.jpg" alt="Foodie Finder Banner" className="w-full h-full object-cover" />
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="relative -mt-5 flex justify-center font-semibold text-xl text-black style-neuton px-4">
+      <div className="relative -mt-6 flex justify-center font-semibold text-lg sm:text-xl text-black style-neuton">
         <input
           type="text"
           placeholder="Search Bar"
-          className="w-full md:w-11/12 bg-white border border-[#FFC533] rounded-full px-5 py-4 shadow-xl focus:outline-none"
+          className="w-11/12 sm:w-10/12 bg-white border border-t-[#FCE8D8] border-[#FFC533] rounded-full px-4 py-3 sm:px-5 sm:py-4 shadow-xl focus:outline-none"
         />
       </div>
 
       {/* Categories */}
-      <div className="mt-6 px-4 md:px-6 flex gap-4 overflow-x-auto w-full">
+      <div className="mt-6 px-4 sm:px-6 flex gap-4 overflow-x-auto w-full">
         {categories.map(({ file, category }) => (
           <div key={file} className="flex flex-col items-center flex-shrink-0">
             <img
               src={`/browse/${file}.jpg`}
               alt={category}
-              className="w-24 h-20 md:w-25 md:h-20 object-cover rounded-[10px] opacity-90 border-b-4 border-b-[#FFC533] shadow-[0_10px_14px_-4px_rgba(207,181,60,0.5)]"
+              className="w-16 h-14 sm:w-24 sm:h-20 object-cover rounded-lg opacity-90 border-b-4 border-b-[#FFC533] border-[#FCE8D8] shadow-md"
             />
-            <p className="text-sm md:text-base mt-1">{category}</p>
+            <p className="text-xs sm:text-sm mt-1 text-center">{category}</p>
           </div>
         ))}
       </div>
 
       {/* Recommended Section */}
-      <div className="mt-4 px-4 md:px-6 flex flex-col">
-        <h2 className="text-2xl md:text-3xl font-semibold mb-2 style-neuton">
-          Recommended for You
-        </h2>
+      <div className="mt-4 px-4 sm:px-6 flex flex-col">
+        <h2 className="text-xl sm:text-2xl font-semibold text-black mb-2 style-neuton">Recommended for You</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-4 pb-24">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 pb-24">
           {recommendedItems.map((item) => (
-            <div
-              key={item.file}
-              className="bg-[#FFFAE2] border border-[#FCE8D8] w-full rounded-4xl shadow-[0_4px_6px_-1px_rgba(207,181,60,0.5)] flex items-center p-2 md:p-3 gap-2 h-auto"
-            >
+            <div key={item.file} className="bg-[#FFFAE2] border border-[#FCE8D8] rounded-2xl shadow-md flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-3 h-auto">
               {/* LEFT: IMAGE */}
-              <div className="flex-shrink-0 w-36 md:w-46 h-36 md:h-40 flex items-center  top -5 justify-center ">
-                <img
-                  src={`/Recommend Food/${item.file}.png`}
-                  alt={item.name}
-                  className="w-full h-full object-contain "
-                />
-              </div>
+              <img
+                src={`/Recommend Food/${item.file}.png`}
+                alt={item.name}
+                className={`w-full sm:w-32 h-32 sm:h-28 object-contain
+                  ${item.file === "Sinugbang Panga ng Tuna" ? "-rotate-22" : ""}
+                  ${item.file === "Pinirito Isda" ? "-rotate-20" : ""}
+                  ${item.file === "Tinolang Tuna" ? "-rotate-40" : ""}
+                `}
+              />
 
               {/* RIGHT: TEXT */}
-              <div className="flex-1 flex flex-col justify-center mt-1 md:mt-0">
-                <p className="font-bold text-xl md:text-2xl style-neuton">{item.name}</p>
-                <p className="text-gray-700 text-sm md:text-base style-poppins">- {item.restaurant}</p>
-                <p className="text-yellow-500 text-sm font-semibold mt-1">
+              <div className="flex flex-col justify-center text-xs sm:text-sm w-full sm:w-auto mt-2 sm:mt-0">
+                <p className="font-bold text-sm sm:text-base">{item.name}</p>
+                <p className="text-gray-700 text-xs sm:text-sm">- {item.restaurant}</p>
+                <p className="text-yellow-500 text-xs sm:text-xl mb-1">
                   {Array.from({ length: 5 }, (_, i) => (
-                    <span key={i}>{i < Math.round(item.rating) ? "⭐" : "☆"}</span>
+                    <span key={i}>{i < item.rating ? "★" : "☆"}</span>
                   ))}
                 </p>
-                <div className="flex items-center gap-3 mt-1">
-                  <p className="font-semibold text-black text-lg md:text-xl">₱ {item.price}.00</p>
+
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <p className="font-semibold text-black text-sm sm:text-base">₱ {item.price}.00</p>
                   {item.discount && (
-                    <span className="bg-[#CFB53C] text-xs font-bold px-2 py-1 rounded-full text-black">
+                    <p className="bg-[#CFB53C] text-black rounded-xl text-xs sm:text-sm px-2 py-1">
                       ₱ {item.discount}.00 off
-                    </span>
+                    </p>
                   )}
                 </div>
               </div>
@@ -103,19 +96,11 @@ export default function HomePage() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#CFB53C] rounded-t-[10px] shadow-md flex justify-around items-center py-2">
-        <button className="text-[#FFC533]">
-          <House size={26} />
-        </button>
-        <button className="text-black hover:text-[#FFC533] transition">
-          <MapPin size={26} />
-        </button>
-        <button className="text-black hover:text-[#FFC533] transition">
-          <Heart size={26} />
-        </button>
-        <button className="text-black hover:text-[#FFC533] transition">
-          <CircleUserRound size={26} />
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-2">
+        <button className="text-[#FFC533]"><House size={26} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><MapPin size={26} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><Heart size={26} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><CircleUserRound size={26} /></button>
       </div>
     </div>
   );

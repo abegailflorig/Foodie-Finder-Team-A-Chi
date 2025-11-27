@@ -3,7 +3,7 @@ import { ArrowLeft, House, MapPin, Heart, CircleUserRound } from "lucide-react";
 export default function LocationPage() {
   const items = [
     {
-      file: "Mui's",
+      file: "Muis",
       name: "Mui’s Cupsilog",
       address: "6LQJ+3MC, Iligan City.",
       time: "19 min",
@@ -69,22 +69,33 @@ export default function LocationPage() {
               key={i}
               className="bg-white rounded-[25px] border border-t-[#FCE8D8] border-[#FFC533] p-3 flex gap-4 sm:gap-5 shadow-[0_10px_10px_-2px_rgba(207,181,60,0.6)] w-full"
             >
-              <img
-                src={`/places/${item.file}.png`}
-                alt={item.name}
-                className="w-28 h-24 sm:w-36 sm:h-32 object-cover border-b-[3px] border-[#FFC533] rounded-[20px] shadow-[0_20px_10px_-2px_rgba(207,181,60,0.6)]"
-                onError={(e) => {
-                  const file = item.file;
+<img
+  src={`/places/${item.file}.png`}
+  alt={item.name}
+  className="
+    w-28 h-24                /* mobile */
+    sm:w-36 sm:h-32          /* small screens */
+    md:w-60 md:h-40          /* desktop: significantly wider */
+    lg:w-90 lg:h-44          /* large desktop: even wider */
+    object-cover 
+    border-b-[3px] border-[#FFC533] 
+    rounded-[20px] 
+    shadow-[0_20px_10px_-2px_rgba(207,181,60,0.6)]
+  "
+  onError={(e) => {
+    const file = item.file;
 
-                  if (e.target.src.includes(".png")) {
-                    e.target.src = `/places/${file}.jpg`;
-                  } else if (e.target.src.includes(".jpg")) {
-                    e.target.src = `/places/${file}.webp`;
-                  } else {
-                    e.target.src = "/placeholder/default.png";
-                  }
-                }}
-              />
+    if (e.target.src.includes(".png")) {
+      e.target.src = `/places/${file}.jpg`;
+    } else if (e.target.src.includes(".jpg")) {
+      e.target.src = `/places/${file}.webp`;
+    } else {
+      e.target.src = "/placeholder/default.png";
+    }
+  }}
+/>
+
+
 
               <div className="flex flex-col flex-grow">
                 <h3 className="font-semibold style-neuton text-[20px] sm:text-[25px] leading-tight">
