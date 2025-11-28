@@ -1,5 +1,5 @@
 // Cleaned and improved DetailsPage component
-import { ArrowLeft, House, MapPin, Heart, CircleUserRound } from "lucide-react";
+import { ArrowLeft, House, MapPin, Heart, CircleUserRound, Menu } from "lucide-react";
 
 export default function DetailsPage() {
   const header = [
@@ -54,10 +54,10 @@ export default function DetailsPage() {
 
             <div className="flex items-start justify-between mt-3 pr-6 sm:pr-10 relative style-neuton">
               <p className="text-[32px] sm:text-[38px] font-bold text-gray-900">₱{item.price}</p>
-              <p className="text-yellow-600 text-lg sm:text-xl font-semibold mb-1">⭐⭐⭐⭐☆</p>
+              <p className="text-black text-lg sm:text-[30px] font-semibold sm:-mt-5">☆☆☆☆☆</p>
 
               {item.discount && (
-                <span className="absolute top-16 right-2 sm:right-6 text-[14px] sm:text-[18px] bg-[#CFB53C] text-black px-2 py-[1px] rounded-full">
+                <span className="absolute top-16 -right-6 sm:-right-6 text-[14px] sm:text-[18px] bg-[#CFB53C] text-black px-2 py-[1px] rounded-full">
                   ₱{item.discount} off
                 </span>
               )}
@@ -94,31 +94,30 @@ export default function DetailsPage() {
       <div className="mt-6 px-4 sm:px-6 flex flex-col">
         <h2 className="style-neuton text-black mb-3 text-[26px] sm:text-[30px]">Similar Dish</h2>
 
-        <div className="grid grid-cols-2 gap-6 sm:gap-10 pb-24">
+        <div className="grid grid-cols-2 gap-6 sm:gap-20 pb-20">
           {similar.map((item) => (
             <div
               key={item.file}
               className="relative bg-white rounded-2xl border border-b-[4px] border-[#CFB53C] pt-16 pb-4 px-3 sm:px-4 flex flex-col items-center shadow-[0_25px_20px_-2px_rgba(207,181,60,0.6)]"
             >
               <div
-  className={`absolute left-1/2 -translate-x-1/2 ${
-    item.file === "48" ? "-top-11" : "-top-20"
-  }`}
->
-              <img
-  src={`/similar/${item.file}.png`}
-  onError={(e) => {
-    e.target.onerror = null;
-    e.target.src = `/similar/${item.file}.jpg`;
-  }}
-  alt={item.file}
-  className={`object-contain ${
-    item.file === "48"
-      ? "w-26 h-30"  // Smaller for Ah Mei's Kitchen
-      : "w-28 h-32 sm:w-40 sm:h-44"  // Normal for all other dishes
-  }`}
-/>
-
+                className={`absolute left-1/2 -translate-x-1/2 ${
+                  item.file === "48" ? "-top-11" : "-top-25 sm:-top-20"
+                }`}
+              >
+                <img
+                src={`/similar/${item.file}.png`}
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = `/similar/${item.file}.jpg`;
+                }}
+                alt={item.file}
+                className={`object-contain ${
+                  item.file === "48"
+                    ? "w-48 h-32"  
+                    : "w-40 h-50 sm:w-45 sm:h-40" 
+                }`}
+              />
               </div>
 
               <div className="flex flex-col mt-5 text-left w-full">
@@ -126,13 +125,13 @@ export default function DetailsPage() {
                   {item.name}
                 </h3>
                 <p className="text-gray-600 text-[14px] sm:text-[18px] style-poppins -mt-1">– {item.restaurant}</p>
-                <p className="text-yellow-500 text-[12px] sm:text-[14px] font-semibold mt-1 leading-tight">⭐⭐⭐⭐☆</p>
+                <p className="text-yellow-500 text-[12px] sm:text-[20px] font-semibold mt-1 leading-tight">★★★★☆</p>
 
                 <div className="flex items-center gap-6 sm:gap-12 mt-3 style-neuton">
                   <p className="text-black font-semibold text-[20px] sm:text-[25px]">₱ {item.price}.00</p>
 
                   {item.discount && (
-                    <span className="absolute top-36 sm:top-40 left-[81px] text-[12px] sm:text-[15px] bg-[#CFB53C] text-black px-2 py-[2px] rounded-full">
+                    <span className="absolute top-36 sm:top-40 left-[101px] text-[12px] sm:text-[15px] bg-[#CFB53C] text-black px-2 py-[2px] rounded-full">
                       ₱{item.discount} off
                     </span>
                   )}
@@ -146,6 +145,7 @@ export default function DetailsPage() {
       {/* BOTTOM NAV */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-yellow-300 rounded-t-3xl shadow-md flex justify-around items-center py-2">
         <button className="text-[#FFC533]"><House size={22} /></button>
+        <button className="text-black hover:text-[#FFC533]"><Menu size={22} /></button>
         <button className="text-black hover:text-[#FFC533] transition"><MapPin size={22} /></button>
         <button className="text-black hover:text-[#FFC533] transition"><Heart size={22} /></button>
         <button className="text-black hover:text-[#FFC533] transition"><CircleUserRound size={22} /></button>

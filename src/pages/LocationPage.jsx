@@ -1,4 +1,4 @@
-import { ArrowLeft, House, MapPin, Heart, CircleUserRound } from "lucide-react";
+import { ArrowLeft, House, MapPin, Heart, CircleUserRound,Menu } from "lucide-react";
 
 export default function LocationPage() {
   const items = [
@@ -43,7 +43,7 @@ export default function LocationPage() {
     <div className="min-h-screen bg-[#FFFAE2] flex flex-col">
 
       {/* Back Arrow + Search Bar */}
-      <div className="px-5 pt-4">
+      <div className="px-4 pt-4 flex flex-col items-start">
         <button className="mb-3">
           <ArrowLeft size={28} className="text-black" />
         </button>
@@ -51,94 +51,70 @@ export default function LocationPage() {
         <input
           type="text"
           placeholder="Search Restaurant"
-          className="w-full style-neuton text-[22px] sm:text-[24px] px-5 py-3 border border-t-[#FCE8D8] border-[#FFC533] rounded-full bg-white shadow-xl outline-none"
+          className="w-full  sm:w-full text-[16px] sm:text-[18px] px-4 py-2 sm:py-3 border border-t-[#FCE8D8] border-[#FFC533] rounded-full bg-white shadow-md outline-none"
         />
       </div>
 
       {/* Content */}
-      <div className="px-5 mt-6">
-        <h2 className="font-regular text-[22px] sm:text-[24px] style-neuton mb-3">
+      <div className="px-4 mt-4">
+        <h2 className="text-[18px] sm:text-[20px] font-semibold style-neuton mb-3">
           Nearby Restaurant
         </h2>
 
         {/* Restaurant Cards */}
-        <div className="space-y-5 pb-24">
-
+        <div className="space-y-4 pb-28">
           {items.map((item, i) => (
             <div
               key={i}
-              className="bg-white rounded-[25px] border border-t-[#FCE8D8] border-[#FFC533] p-3 flex gap-4 sm:gap-5 shadow-[0_10px_10px_-2px_rgba(207,181,60,0.6)] w-full"
+              className="bg-white rounded-2xl border border-t-[#FCE8D8] border-[#FFC533] p-3 flex gap-3 shadow-md w-[full] sm:w-full"
             >
-<img
-  src={`/places/${item.file}.png`}
-  alt={item.name}
-  className="
-    w-28 h-24                /* mobile */
-    sm:w-36 sm:h-32          /* small screens */
-    md:w-60 md:h-40          /* desktop: significantly wider */
-    lg:w-90 lg:h-44          /* large desktop: even wider */
-    object-cover 
-    border-b-[3px] border-[#FFC533] 
-    rounded-[20px] 
-    shadow-[0_20px_10px_-2px_rgba(207,181,60,0.6)]
-  "
-  onError={(e) => {
-    const file = item.file;
+              {/* Image */}
+              <img
+                src={`/places/${item.file}.png`}
+                alt={item.name}
+                className="w-50 h-25 md:w-82 md:h-32 object-cover border-b-2 border-[#FFC533] rounded-[28px] shadow-sm flex-shrink-0"
+                onError={(e) => {
+                  const file = item.file;
+                  if (e.target.src.includes(".png")) e.target.src = `/places/${file}.jpg`;
+                  else if (e.target.src.includes(".jpg")) e.target.src = `/places/${file}.webp`;
+                  else e.target.src = "/placeholder/default.png";
+                }}
+              />
 
-    if (e.target.src.includes(".png")) {
-      e.target.src = `/places/${file}.jpg`;
-    } else if (e.target.src.includes(".jpg")) {
-      e.target.src = `/places/${file}.webp`;
-    } else {
-      e.target.src = "/placeholder/default.png";
-    }
-  }}
-/>
-
-
-
+              {/* Text */}
               <div className="flex flex-col flex-grow">
-                <h3 className="font-semibold style-neuton text-[20px] sm:text-[25px] leading-tight">
+                <h3 className="font-semibold text-[14px] sm:text-[16px] md:text-[18px] style-neuton leading-tight">
                   {item.name}
                 </h3>
-                <p className="text-black style-poppins text-[12px] sm:text-[15px] mt-1">
+                <p className="text-black text-[10px] sm:text-[12px] md:text-[14px] style-poppins mt-1">
                   Address: {item.address}
                 </p>
-                <p className="text-black style-poppins text-[12px] sm:text-[14px] font-bold mt-1">
+                <p className="text-black text-[10px] sm:text-[12px] md:text-[14px] font-bold mt-1">
                   Get There: {item.time}
                 </p>
 
                 <div className="flex items-center gap-2 mt-2">
-                  <p className="text-[#FFC533] text-xs sm:text-sm font-medium">
+                  <p className="text-[#FFC533] text-[10px] sm:text-[12px] md:text-[14px] font-medium">
                     {item.rating}
                   </p>
-                  <span className="bg-[#CFB53C] text-black style-poppins px-2 py-[2px] rounded-full text-[10px] sm:text-xs">
+                  <span className="bg-[#CFB53C] text-black px-2 py-[1px] rounded-full text-[8px] sm:text-[10px] md:text-[12px]">
                     reviews
                   </span>
                 </div>
               </div>
             </div>
           ))}
-
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-[10px] shadow-md flex justify-around items-center py-2">
-        <button className="text-black">
-          <House size={26} />
-        </button>
-        <button className="text-[#FFC533] hover:text-[#FFC533] transition">
-          <MapPin size={26} />
-        </button>
-        <button className="text-black hover:text-[#FFC533] transition">
-          <Heart size={26} />
-        </button>
-        <button className="text-black hover:text-[#FFC533] transition">
-          <CircleUserRound size={26} />
-        </button>
+      {/* BOTTOM NAV */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-yellow-300 rounded-t-3xl shadow-md flex justify-around items-center py-2">
+        <button className="text-black hover:text-[#FFC533] transition"><House size={22} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><Menu size={22} /></button>
+        <button className="text-[#FFC533] hover:text-black transition"><MapPin size={22} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><Heart size={22} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><CircleUserRound size={22} /></button>
       </div>
-
     </div>
   );
 }

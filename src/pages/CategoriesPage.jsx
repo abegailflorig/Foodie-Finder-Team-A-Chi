@@ -1,4 +1,4 @@
-import { Home, MapPin, Heart, CircleUserRound } from "lucide-react";
+import { Home, MapPin, Heart, CircleUserRound, Menu } from "lucide-react";
 
 export default function CategoriesPage() {
   const dishes = [
@@ -79,9 +79,9 @@ export default function CategoriesPage() {
                 </p>
                 <p className="text-xs sm:text-sm style-poppins text-gray-500 -mt-1 p-1 sm:p-2">- {dish.restaurant}</p>
 
-                <p className="text-yellow-500 text-xs sm:text-sm font-semibold mb-2 sm:mb-3">
+                <p className="text-yellow-500 text-[22px] sm:text-[25px] font-semibold mb-2 sm:mb-3">
                   {Array.from({ length: 5 }, (_, i) => (
-                    <span key={i}>{i < dish.rating ? "⭐" : "☆"}</span>
+                    <span key={i}>{i < dish.rating ? "★" : "☆"}</span>
                   ))}
                 </p>
 
@@ -105,10 +105,11 @@ export default function CategoriesPage() {
 
       {/* BOTTOM NAV */}
       <div className="fixed bottom-0 left-0 w-full bg-white border border-[#CFB53C] rounded-t-[12px] py-2 sm:py-3 flex justify-around z-50">
-        <Home className="text-black" size={24} />
-        <MapPin className="text-black" size={24} />
-        <Heart className="text-black" size={24} />
-        <CircleUserRound className="text-black" size={24} />
+        <button className="text-black hover:text-[#FFC533] transition"><Home size={22} /></button>
+        <button className="text-[#FFC533] hover:text-black"><Menu size={22} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><MapPin size={22} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><Heart size={22} /></button>
+        <button className="text-black hover:text-[#FFC533] transition"><CircleUserRound size={22} /></button>
       </div>
     </div>
   );
