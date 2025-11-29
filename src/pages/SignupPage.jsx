@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabaseClient"; 
+import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router";
+import { Eye, EyeClosed } from "lucide-react";
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -13,10 +15,16 @@ export default function SignupPage() {
     password: "",
   });
 
+  // Handle input changes
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
+  // Handle signup
   const handleSignup = async () => {
     const { full_name, email, phone_number, address, password } = formData;
 
@@ -25,37 +33,39 @@ export default function SignupPage() {
       return;
     }
 
-    // Create user in Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    // Create user in Supabase Auth WITHOUT email confirmation
+    const { data, error } = await supabase.auth.signUp(
+      {
+        email,
+        password,
+      },
+      { emailRedirectTo: null } // Skip confirmation email
+    );
 
     if (error) {
       alert(error.message);
       return;
     }
 
-    // Insert profile into `profiles` table
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .insert([
-        {
-          id: data.user.id,
-          full_name,
-          phone_number,
-          address,
-        },
-      ]);
+    const userId = data.user.id;
+
+    // Insert into profiles table
+    const { error: profileError } = await supabase.from("profiles").insert([
+      {
+        id: userId,
+        full_name,
+        phone_number,
+        address,
+        role: "user",
+      },
+    ]);
 
     if (profileError) {
       alert(profileError.message);
       return;
     }
 
-    alert("Signup successful! Please check your email to confirm.");
-    
-    // Navigate to login page
+    alert("Signup successful! You can now log in.");
     navigate("/login");
   };
 
@@ -91,11 +101,12 @@ export default function SignupPage() {
 
         {/* Signup Form */}
         <div className="style-neuton bg-white rounded-3xl shadow-xl p-5 md:p-8 w-full max-w-lg border border-[#FFC533]">
+
           <input
             name="full_name"
             type="text"
-            className="w-full mb-4 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl"
-            placeholder="Name"
+            className="w-full mb-4 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
+            placeholder="Name:"
             value={formData.full_name}
             onChange={handleChange}
           />
@@ -103,8 +114,8 @@ export default function SignupPage() {
           <input
             name="email"
             type="email"
-            className="w-full mb-4 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl"
-            placeholder="Email"
+            className="w-full mb-4 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
+            placeholder="Email:"
             value={formData.email}
             onChange={handleChange}
           />
@@ -112,26 +123,41 @@ export default function SignupPage() {
           <input
             name="phone_number"
             type="tel"
-            className="w-full mb-4 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl"
-            placeholder="Phone number"
+            className="w-full mb-4 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
+            placeholder="Phone number:"
             value={formData.phone_number}
             onChange={handleChange}
           />
 
-          <input
-            name="password"
-            type="password"
-            className="w-full mb-4 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-          />
+          {/* PASSWORD WITH SHOW/HIDE ICON */}
+          <div className="relative mb-4">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              className="w-full px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
+              placeholder="Password:"
+              value={formData.password}
+              onChange={handleChange}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-600"
+            >
+              {showPassword ? (
+                <Eye className="h-5 w-5" />
+              ) : (
+                <EyeClosed className="h-5 w-5" />
+              )}
+            </button>
+          </div>
 
           <input
             name="address"
             type="text"
-            className="w-full mb-2 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl"
-            placeholder="Address"
+            className="w-full mb-2 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
+            placeholder="Address:"
             value={formData.address}
             onChange={handleChange}
           />

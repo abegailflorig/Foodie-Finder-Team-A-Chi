@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { FaFacebookF, FaGoogle } from "react-icons/fa";
-import  { useState } from "react";
+import { Eye, EyeClosed } from "lucide-react";
 import { supabase } from "../lib/supabaseClient"; 
 import { useNavigate } from "react-router";
 
@@ -8,21 +8,41 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // toggle state
 
   const handleLogin = async () => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const { data: authData, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
-    // Login successful -> redirect to homepage
-    navigate("/homepage");
-  };
+  const user = authData.user;
+
+  // Fetch role from profiles table
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile) {
+    alert("Profile not found.");
+    return;
+  }
+
+  // 🔥 CHECK ROLE
+  if (profile.role === "admin") {
+    navigate("/adminpage"); // ADMIN DASHBOARD
+  } else {
+    navigate("/homepage"); // USER HOMEPAGE
+  }
+};
+
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-white overflow-hidden">
@@ -48,8 +68,9 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <div className="style-neuton bg-white rounded-3xl shadow-xl p-6 md:p-8 w-full max-w-lg border border-[#FFC533] flex flex-col items-center">
+        <div className="style-neuton bg-white rounded-3xl shadow-xl p-6 md:p-8 w-full max-w-lg flex flex-col items-center border border-[#FFC533]">
 
+          {/* Email */}
           <input
             type="email"
             className="w-full mb-4 md:mb-6 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
@@ -58,17 +79,31 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <input
-            type="password"
-            className="w-full mb-2 px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
-            placeholder="Password:"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          {/* Password with Lucide Eye Icon */}
+          <div className="relative w-full mb-2">
+            <input
+              type={showPassword ? "text" : "password"}
+              className="w-full px-5 py-3 md:py-4 rounded-full border border-[#FFC533] shadow-xl focus:outline-none"
+              placeholder="Password:"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-600"
+            >
+              {showPassword ? <Eye size={20} /> : <EyeClosed size={20} />}
+            </button>
+          </div>
+
         </div>
 
         {/* Login Button */}
-        <button onClick={handleLogin} className="w-40 md:w-52 bg-[#FFC533] rounded-full border border-[#CFB53C] shadow-xl mt-6 py-2 md:py-3 text-lg md:text-xl style-neuton hover:bg-[#CFB53C] transition">
+        <button
+          onClick={handleLogin}
+          className="w-40 md:w-52 bg-[#FFC533] rounded-full border border-[#CFB53C] shadow-xl mt-6 py-2 md:py-3 text-lg md:text-xl style-neuton hover:bg-[#CFB53C] transition"
+        >
           Login
         </button>
 

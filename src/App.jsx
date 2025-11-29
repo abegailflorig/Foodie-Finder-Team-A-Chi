@@ -14,61 +14,78 @@ import LocationPage from "./pages/LocationPage";
 import Cupsilog from "./restaurant/Cupsilog";
 import FavoritePage from "./pages/FavoritePage";
 import ProfilePage from "./pages/ProfilePage";
+import AdminPage from "./admin/AdminPage";   // ADD YOUR ADMIN PAGE HERE
 
-// Protected Route Component
+// 🔒 USER Protected Route
 function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setLoading(false);
     };
     checkUser();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => listener.subscription.unsubscribe();
   }, []);
 
   if (loading) return <LoadingPage />;
-
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/landing" replace />;
 
   return children;
 }
 
-// Public Route Component for Login/Signup
+// 🔒 ADMIN Protected Route
+function AdminRoute({ children }) {
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      setProfile(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return <LoadingPage />;
+
+  if (!profile) return <Navigate to="/landing" replace />;
+
+  if (profile.role !== "admin") return <Navigate to="/homepage" replace />;
+
+  return children;
+}
+
+// 👤 Public Route (Login/Signup)
 function PublicRoute({ children }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setLoading(false);
     };
     checkUser();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => listener.subscription.unsubscribe();
   }, []);
 
   if (loading) return <LoadingPage />;
-
-  // If already logged in, redirect to homepage
   if (user) return <Navigate to="/homepage" replace />;
 
   return children;
@@ -78,118 +95,91 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Initial Loading */}
-        <Route
-          path="/"
-          element={
-            <LoadingPage />
-          }
-        />
 
-        {/* Landing Page */}
-        <Route
-          path="/landing"
-          element={
-            <PublicRoute>
-              <LandingPage />
-            </PublicRoute>
-          }
-        />
+        <Route path="/" element={<LoadingPage />} />
 
-        {/* Login / Signup */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <PublicRoute>
-              <SignupPage />
-            </PublicRoute>
-          }
-        />
+        <Route path="/landing" element={
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        } />
 
-        {/* Protected Routes */}
-        <Route
-          path="/homepage"
-          element={
-            <ProtectedRoute>
-              <HomePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/detailspage"
-          element={
-            <ProtectedRoute>
-              <DetailsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/feedbackpage"
-          element={
-            <ProtectedRoute>
-              <FeedbackPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/resfeedback"
-          element={
-            <ProtectedRoute>
-              <ResFeedback />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/categoriespage"
-          element={
-            <ProtectedRoute>
-              <CategoriesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/locationpage"
-          element={
-            <ProtectedRoute>
-              <LocationPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cupsilog"
-          element={
-            <ProtectedRoute>
-              <Cupsilog />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/favoritepage"
-          element={
-            <ProtectedRoute>
-              <FavoritePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profilepage"
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/login" element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        } />
 
-        {/* Fallback */}
+        <Route path="/signup" element={
+          <PublicRoute>
+            <SignupPage />
+          </PublicRoute>
+        } />
+
+        {/* USER ROUTES */}
+        <Route path="/homepage" element={
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/detailspage" element={
+          <ProtectedRoute>
+            <DetailsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/feedbackpage" element={
+          <ProtectedRoute>
+            <FeedbackPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/resfeedback" element={
+          <ProtectedRoute>
+            <ResFeedback />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/categoriespage" element={
+          <ProtectedRoute>
+            <CategoriesPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/locationpage" element={
+          <ProtectedRoute>
+            <LocationPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/cupsilog" element={
+          <ProtectedRoute>
+            <Cupsilog />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/favoritepage" element={
+          <ProtectedRoute>
+            <FavoritePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/profilepage" element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
+
+        {/* ADMIN ROUTE */}
+        <Route path="/adminpage" element={
+          <AdminRoute>
+            <AdminPage />
+          </AdminRoute>
+        } />
+
         <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </Router>
   );

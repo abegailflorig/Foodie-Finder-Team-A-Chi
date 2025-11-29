@@ -1,6 +1,8 @@
-import { Home, MapPin, Heart, CircleUserRound, Menu } from "lucide-react";
-
+import { House, MapPin, Heart, CircleUserRound, Menu } from "lucide-react";
+import { useNavigate } from "react-router";
 export default function CategoriesPage() {
+  const navigate = useNavigate();
+
   const dishes = [
     { name: "Lumpia Shanghai", restaurant: "Ah Mei's Kitchen", price: "295", file: "lumpia", rating: 5 },
     { name: "Lumsilog", restaurant: "Mui’s Cupsilog", price: "45", file: "lumsilog", rating: 5 },
@@ -103,13 +105,23 @@ export default function CategoriesPage() {
         ))}
       </div>
 
-      {/* BOTTOM NAV */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border border-[#CFB53C] rounded-t-[12px] py-2 sm:py-3 flex justify-around z-50">
-        <button className="text-black hover:text-[#FFC533] transition"><Home size={22} /></button>
-        <button className="text-[#FFC533] hover:text-black"><Menu size={22} /></button>
-        <button className="text-black hover:text-[#FFC533] transition"><MapPin size={22} /></button>
-        <button className="text-black hover:text-[#FFC533] transition"><Heart size={22} /></button>
-        <button className="text-black hover:text-[#FFC533] transition"><CircleUserRound size={22} /></button>
+      {/* Bottom Navigation with navigation handlers */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-2 z-50">
+        <button onClick={() => navigate("/homepage")} className="text-black hover:text-[#FFC533] transition">
+          <House size={26} />
+        </button>
+        <button onClick={() => navigate("/categoriespage")}className="text-[#FFC533] hover:text-black transition">
+          <Menu size={22} />
+        </button>
+        <button onClick={() => navigate("/locationpage")} className="text-black hover:text-[#FFC533] transition">
+          <MapPin size={26} />
+        </button>
+        <button onClick={() => navigate("/favoritepage")} className="text-black hover:text-[#FFC533] transition">
+          <Heart size={26} />
+        </button>
+        <button onClick={() => navigate("/profilepage")} className="text-black hover:text-[#FFC533] transition">
+          <CircleUserRound size={26} />
+        </button>
       </div>
     </div>
   );
