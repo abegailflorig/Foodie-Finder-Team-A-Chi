@@ -1,51 +1,56 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"; 
 import { supabase } from "../lib/supabaseClient";
 import { Upload, Store, Tags, ChefHat } from "lucide-react";
 
 export default function AdminPage() {
   const [restaurants, setRestaurants] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [meals, setMeals] = useState([]);
 
-  // FORM STATES
   const [restaurantData, setRestaurantData] = useState({
     name: "",
     address: "",
     cuisine: "",
     description: "",
     image: null,
+    image_url: "",
     price_min: "",
     price_max: "",
   });
 
-  const [categoryData, setCategoryData] = useState({
+  const [recommendationData, setRecommendationData] = useState({
     name: "",
-    icon: "",
     image: null,
+    image_url: "",
   });
 
   const [menuItemData, setMenuItemData] = useState({
     restaurant_id: "",
-    category_id: "",
+    recommendation_ids: [],
+    meal_ids: [],
     name: "",
     price: "",
     description: "",
     image: null,
+    image_url: "",
   });
 
-  // Fetch restaurants and categories
+  // Load restaurants, recommendations, and meals
   useEffect(() => {
-    async function fetchData() {
-      const { data: restData } = await supabase.from("restaurants").select("*");
+    async function loadData() {
+      const { data: restData } = await supabase.from("restaurants").select("*").order("name");
       setRestaurants(restData || []);
 
-      const { data: catData } = await supabase.from("categories").select("*");
-      setCategories(catData || []);
-    }
+      const { data: recData } = await supabase.from("recommendation").select("*").order("name");
+      setRecommendations(recData || []);
 
-    fetchData();
+      const { data: mealData } = await supabase.from("meals").select("*").order("name");
+      setMeals(mealData || []);
+    }
+    loadData();
   }, []);
 
-  // Upload image helper
+  // Upload helper
   async function uploadImage(bucket, file) {
     if (!file) return null;
     const fileName = `${Date.now()}-${file.name}`;
@@ -59,284 +64,200 @@ export default function AdminPage() {
     return data.publicUrl;
   }
 
-  // ===== Add Restaurant =====
+  // Add restaurant
   const handleAddRestaurant = async () => {
     if (!restaurantData.name || !restaurantData.price_min || !restaurantData.price_max) {
-      alert("Please fill in all required fields");
+      alert("Please fill required restaurant fields.");
       return;
     }
+    const payload = {
+      name: restaurantData.name,
+      address: restaurantData.address,
+      cuisine: restaurantData.cuisine,
+      description: restaurantData.description,
+      price_min: Number(restaurantData.price_min),
+      price_max: Number(restaurantData.price_max),
+      image_url: restaurantData.image_url || null,
+    };
+    const { error } = await supabase.from("restaurants").insert([payload]);
+    if (error) return alert(error.message);
 
-    const image_url = await uploadImage("restaurant-images", restaurantData.image);
-
-    const { image, price_min, price_max, ...cleanData } = restaurantData;
-
-    const { error } = await supabase.from("restaurants").insert([
-      {
-        ...cleanData,
-        price_min: Number(price_min),
-        price_max: Number(price_max),
-        image_url,
-      },
-    ]);
-
-    if (error) {
-      console.error("Failed to add restaurant:", error);
-      alert(error.message);
-      return;
-    }
-
-    setRestaurantData({
-      name: "",
-      address: "",
-      cuisine: "",
-      description: "",
-      image: null,
-      price_min: "",
-      price_max: "",
-    });
-
-    const { data: restData } = await supabase.from("restaurants").select("*");
+    setRestaurantData({ name: "", address: "", cuisine: "", description: "", image: null, image_url: "", price_min: "", price_max: "" });
+    const { data: restData } = await supabase.from("restaurants").select("*").order("name");
     setRestaurants(restData || []);
-    alert("Restaurant added successfully!");
+    alert("Restaurant added");
   };
 
-  // ===== Add Category =====
-  const handleAddCategory = async () => {
-    if (!categoryData.name) {
-      alert("Please enter category name");
-      return;
-    }
+  // Add recommendation
+  const handleAddRecommendation = async () => {
+    if (!recommendationData.name) return alert("Recommendation name required");
+    const { error } = await supabase.from("recommendation").insert([{ name: recommendationData.name, image_url: recommendationData.image_url }]);
+    if (error) return alert(error.message);
 
-    const image_url = await uploadImage("category-images", categoryData.image);
-
-    const { error } = await supabase.from("categories").insert([
-      {
-        name: categoryData.name,
-        icon: categoryData.icon || "",
-        image_url,
-      },
-    ]);
-
-    if (error) {
-      console.error("Failed to add category:", error);
-      alert(error.message);
-      return;
-    }
-
-    setCategoryData({ name: "", icon: "", image: null });
-
-    const { data: catData } = await supabase.from("categories").select("*");
-    setCategories(catData || []);
-    alert("Category added successfully!");
+    setRecommendationData({ name: "", image: null, image_url: "" });
+    const { data: recData } = await supabase.from("recommendation").select("*").order("name");
+    setRecommendations(recData || []);
+    alert("Recommendation added");
   };
 
-  // ===== Add Menu Item =====
+  // Add menu item with multiple recommendations and meals
   const handleAddMenuItem = async () => {
-    if (!menuItemData.restaurant_id || !menuItemData.category_id || !menuItemData.name || !menuItemData.price) {
-      alert("Please fill in all required fields");
-      return;
+    if (!menuItemData.restaurant_id || !menuItemData.recommendation_ids.length || !menuItemData.meal_ids.length || !menuItemData.name || !menuItemData.price) {
+      return alert("Fill all menu item fields");
     }
 
-    const image_url = await uploadImage("food-images", menuItemData.image);
+    // Insert menu item first
+    const { data: menuItem, error } = await supabase.from("menu_items").insert([{
+      restaurant_id: menuItemData.restaurant_id,
+      name: menuItemData.name,
+      price: Number(menuItemData.price),
+      description: menuItemData.description,
+      image_url: menuItemData.image_url || null
+    }]).select().single();
 
-    const { error } = await supabase.from("menu_items").insert([
-      {
-        restaurant_id: menuItemData.restaurant_id,
-        category_id: menuItemData.category_id,
-        name: menuItemData.name,
-        price: Number(menuItemData.price),
-        description: menuItemData.description,
-        image_url,
-      },
-    ]);
+    if (error) return alert(error.message);
 
-    if (error) {
-      console.error("Failed to add menu item:", error);
-      alert(error.message);
-      return;
+    // Insert into menu_item_recommendations (many-to-many)
+    if (menuItemData.recommendation_ids.length) {
+      const recPayload = menuItemData.recommendation_ids.map(id => ({ menu_item_id: menuItem.id, recommendation_id: id }));
+      const { error: recError } = await supabase.from("menu_item_recommendations").insert(recPayload);
+      if (recError) console.error(recError);
     }
 
-    setMenuItemData({
-      restaurant_id: "",
-      category_id: "",
-      name: "",
-      price: "",
-      description: "",
-      image: null,
-    });
+    // Insert into menu_item_meals (many-to-many)
+    if (menuItemData.meal_ids.length) {
+      const mealPayload = menuItemData.meal_ids.map(id => ({ menu_item_id: menuItem.id, meal_id: id }));
+      const { error: mealError } = await supabase.from("menu_item_meals").insert(mealPayload);
+      if (mealError) console.error(mealError);
+    }
 
-    alert("Menu item added successfully!");
+    setMenuItemData({ restaurant_id: "", recommendation_ids: [], meal_ids: [], name: "", price: "", description: "", image: null, image_url: "" });
+    alert("Menu item added with multiple recommendations and meals!");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 animate-fadeIn">
+    <div className="min-h-screen bg-gray-50 p-6">
       <h1 className="text-4xl font-bold text-center mb-10 text-gray-700">Admin Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-        {/* RESTAURANT CARD */}
-        <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-          <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4 text-gray-700">
-            <Store /> Add Restaurant
-          </h2>
 
-          <div className="grid grid-cols-1 gap-3">
-            <input
-              className="input"
-              placeholder="Restaurant Name"
-              value={restaurantData.name}
-              onChange={(e) => setRestaurantData({ ...restaurantData, name: e.target.value })}
-            />
-            <input
-              className="input"
-              placeholder="Address"
-              value={restaurantData.address}
-              onChange={(e) => setRestaurantData({ ...restaurantData, address: e.target.value })}
-            />
-            <input
-              className="input"
-              placeholder="Cuisine"
-              value={restaurantData.cuisine}
-              onChange={(e) => setRestaurantData({ ...restaurantData, cuisine: e.target.value })}
-            />
-            <textarea
-              className="textarea"
-              placeholder="Description"
-              value={restaurantData.description}
-              onChange={(e) => setRestaurantData({ ...restaurantData, description: e.target.value })}
-            ></textarea>
-            <input
-              className="input"
-              type="number"
-              placeholder="Minimum Price"
-              value={restaurantData.price_min}
-              onChange={(e) => setRestaurantData({ ...restaurantData, price_min: e.target.value })}
-            />
-            <input
-              className="input"
-              type="number"
-              placeholder="Maximum Price"
-              value={restaurantData.price_max}
-              onChange={(e) => setRestaurantData({ ...restaurantData, price_max: e.target.value })}
-            />
+        {/* Add Restaurant */}
+        <div className="bg-white rounded-2xl shadow-md p-6 border">
+          <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4"><Store /> Add Restaurant</h2>
+          <div className="grid gap-3">
+            <input className="input" placeholder="Restaurant Name" value={restaurantData.name}
+              onChange={(e) => setRestaurantData({ ...restaurantData, name: e.target.value })} />
+            <input className="input" placeholder="Address" value={restaurantData.address}
+              onChange={(e) => setRestaurantData({ ...restaurantData, address: e.target.value })} />
+            <input className="input" placeholder="Cuisine" value={restaurantData.cuisine}
+              onChange={(e) => setRestaurantData({ ...restaurantData, cuisine: e.target.value })} />
+            <textarea className="textarea" placeholder="Description" value={restaurantData.description}
+              onChange={(e) => setRestaurantData({ ...restaurantData, description: e.target.value })} />
+            <div className="flex gap-2">
+              <input className="input" type="number" placeholder="Min Price" value={restaurantData.price_min}
+                onChange={(e) => setRestaurantData({ ...restaurantData, price_min: e.target.value })} />
+              <input className="input" type="number" placeholder="Max Price" value={restaurantData.price_max}
+                onChange={(e) => setRestaurantData({ ...restaurantData, price_max: e.target.value })} />
+            </div>
+            <input type="file" className="file-input"
+              onChange={async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const publicUrl = await uploadImage("restaurant-images", file);
+                setRestaurantData({ ...restaurantData, image: file, image_url: publicUrl });
+              }} />
           </div>
-
-          <div className="mt-4 flex items-center gap-3">
-            <Upload className="text-gray-500" />
-            <input
-              type="file"
-              className="file-input"
-              onChange={(e) => setRestaurantData({ ...restaurantData, image: e.target.files[0] })}
-            />
-          </div>
-
-          <button className="btn mt-4 w-full" onClick={handleAddRestaurant}>
-            Add Restaurant
-          </button>
+          <button className="btn mt-4 w-full" onClick={handleAddRestaurant}>Add Restaurant</button>
         </div>
 
-        {/* CATEGORY CARD */}
-        <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-          <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4 text-gray-700">
-            <Tags /> Add Category
-          </h2>
-
-          <div className="grid grid-cols-1 gap-3">
-            <input
-              className="input"
-              placeholder="Category Name"
-              value={categoryData.name}
-              onChange={(e) => setCategoryData({ ...categoryData, name: e.target.value })}
-            />
-            <input
-              className="input"
-              placeholder="Icon Name"
-              value={categoryData.icon}
-              onChange={(e) => setCategoryData({ ...categoryData, icon: e.target.value })}
-            />
-          </div>
-
-          <div className="mt-4 flex items-center gap-3">
-            <Upload className="text-gray-500" />
-            <input
-              type="file"
-              className="file-input"
-              onChange={(e) => setCategoryData({ ...categoryData, image: e.target.files[0] })}
-            />
-          </div>
-
-          <button className="btn mt-4 w-full" onClick={handleAddCategory}>
-            Add Category
-          </button>
+        {/* Add Recommendation */}
+        <div className="bg-white rounded-2xl shadow-md p-6 border">
+          <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4"><Tags /> Add Recommendation</h2>
+          <input className="input" placeholder="Recommendation Name" value={recommendationData.name}
+            onChange={(e) => setRecommendationData({ ...recommendationData, name: e.target.value })} />
+          <input type="file" className="file-input mt-3"
+            onChange={async (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              const publicUrl = await uploadImage("recommendation-images", file);
+              setRecommendationData({ ...recommendationData, image: file, image_url: publicUrl });
+            }} />
+          <button className="btn mt-4 w-full" onClick={handleAddRecommendation}>Add Recommendation</button>
         </div>
 
-        {/* MENU ITEM CARD */}
-        <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200 md:col-span-2">
-          <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4 text-gray-700">
-            <ChefHat /> Add Food / Menu Item
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select
-              className="input"
-              value={menuItemData.restaurant_id}
-              onChange={(e) => setMenuItemData({ ...menuItemData, restaurant_id: e.target.value })}
-            >
+        {/* Add Menu Item */}
+        <div className="bg-white rounded-2xl shadow-md p-6 border md:col-span-2">
+          <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4"><ChefHat /> Add Menu Item</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <select className="input" value={menuItemData.restaurant_id}
+              onChange={(e) => setMenuItemData({ ...menuItemData, restaurant_id: e.target.value })}>
               <option value="">Select Restaurant</option>
-              {restaurants.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
+              {restaurants.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
 
-            <select
-              className="input"
-              value={menuItemData.category_id}
-              onChange={(e) => setMenuItemData({ ...menuItemData, category_id: e.target.value })}
-            >
-              <option value="">Select Category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            {/* Recommendations circle choices */}
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              {recommendations.map((r) => {
+                const selected = menuItemData.recommendation_ids.includes(r.id);
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      if (selected) {
+                        setMenuItemData({ ...menuItemData, recommendation_ids: menuItemData.recommendation_ids.filter(id => id !== r.id) });
+                      } else {
+                        setMenuItemData({ ...menuItemData, recommendation_ids: [...menuItemData.recommendation_ids, r.id] });
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-full border ${selected ? "bg-yellow-400 text-white" : "bg-gray-200 text-gray-700"}`}
+                  >
+                    {r.name}
+                  </button>
+                );
+              })}
+            </div>
 
-            <input
-              className="input"
-              placeholder="Menu Item Name"
-              value={menuItemData.name}
-              onChange={(e) => setMenuItemData({ ...menuItemData, name: e.target.value })}
-            />
-            <input
-              className="input"
-              placeholder="Price"
-              type="number"
-              value={menuItemData.price}
-              onChange={(e) => setMenuItemData({ ...menuItemData, price: e.target.value })}
-            />
+            {/* Meals circle choices */}
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              {meals.map((m) => {
+                const selected = menuItemData.meal_ids.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      if (selected) {
+                        setMenuItemData({ ...menuItemData, meal_ids: menuItemData.meal_ids.filter(id => id !== m.id) });
+                      } else {
+                        setMenuItemData({ ...menuItemData, meal_ids: [...menuItemData.meal_ids, m.id] });
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-full border ${selected ? "bg-green-400 text-white" : "bg-gray-200 text-gray-700"}`}
+                  >
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            <input className="input" placeholder="Food Name" value={menuItemData.name}
+              onChange={(e) => setMenuItemData({ ...menuItemData, name: e.target.value })} />
+            <input className="input" type="number" placeholder="Price" value={menuItemData.price}
+              onChange={(e) => setMenuItemData({ ...menuItemData, price: e.target.value })} />
           </div>
-
-          <textarea
-            className="textarea mt-4"
-            placeholder="Description"
-            value={menuItemData.description}
-            onChange={(e) => setMenuItemData({ ...menuItemData, description: e.target.value })}
-          ></textarea>
-
-          <div className="mt-4 flex items-center gap-3">
-            <Upload className="text-gray-500" />
-            <input
-              type="file"
-              className="file-input"
-              onChange={(e) => setMenuItemData({ ...menuItemData, image: e.target.files[0] })}
-            />
-          </div>
-
-          <button className="btn w-full mt-4" onClick={handleAddMenuItem}>
-            Add Food
-          </button>
+          <textarea className="textarea mt-4" placeholder="Description" value={menuItemData.description}
+            onChange={(e) => setMenuItemData({ ...menuItemData, description: e.target.value })} />
+          <input type="file" className="file-input mt-4"
+            onChange={async (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              const publicUrl = await uploadImage("food-images", file);
+              setMenuItemData({ ...menuItemData, image: file, image_url: publicUrl });
+            }} />
+          <button className="btn w-full mt-4" onClick={handleAddMenuItem}>Add Menu Item</button>
         </div>
+
       </div>
     </div>
   );

@@ -1,155 +1,193 @@
-// Cleaned and improved DetailsPage component
-import { ArrowLeft, House, MapPin, Heart, CircleUserRound, Menu } from "lucide-react";
+import { ArrowLeft } from "lucide-react"; 
+import { useParams, useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function DetailsPage() {
-  const header = [
-    { name: "Kinilaw na Tuna", file: "Kinilaw na Tuna", restaurant: "Avodah Kitchen", price: "289", discount: "20.00" },
-  ];
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-  const ingredients = [
-    { name: "Fish", file: "fish" },
-    { name: "Cucumber", file: "cucumber" },
-    { name: "Pepper", file: "pepper" },
-    { name: "Chili", file: "chili" },
-    { name: "Onion", file: "onion" },
-  ];
+  const [item, setItem] = useState(null);
+  const [restaurant, setRestaurant] = useState(null);
+  const [similar, setSimilar] = useState([]);
 
-  const similar = [
-    { name: "Kinilaw na Isda", file: "Kinilaw na Isda", restaurant: "Fish Head", price: "265", discount: null },
-    { name: "Kinilaw na Tuna", file: "Kinilaw na Tuna", restaurant: "Villa Tuna", price: "250", discount: "10.00" },
-    { name: "Kinilaw na Isda", file: "48", restaurant: "Ah Mei's Kitchen", price: "310", discount: null },
-    { name: "Kinilaw na Isda", file: "89", restaurant: "Fev's Diner", price: "345", discount: null },
-  ];
+  useEffect(() => {
+    loadDetails();
+  }, [id]);
+
+  async function loadDetails() {
+    // -----------------------------------------
+    // 1. LOAD MAIN MENU ITEM + RESTAURANT
+    // -----------------------------------------
+    const { data: menuItem, error } = await supabase
+      .from("menu_items")
+      .select(`
+        id,
+        name,
+        description,
+        price,
+        discount,
+        image_url,
+        restaurant:restaurant_id (
+          id,
+          name,
+          address,
+          image_url
+        )
+      `)
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setItem(menuItem);
+    setRestaurant(menuItem.restaurant);
+
+    // -----------------------------------------
+    // 2. GET THE RECOMMENDATION ID (via bridge table)
+    // -----------------------------------------
+    const { data: recRow } = await supabase
+      .from("menu_item_recommendations")
+      .select("recommendation_id")
+      .eq("menu_item_id", id)
+      .single();
+
+    if (!recRow) return;
+
+    const recommendationId = recRow.recommendation_id;
+
+    // -----------------------------------------
+    // 3. GET IDs of all menu_items with SAME recommendation
+    // -----------------------------------------
+    const { data: relatedLinks } = await supabase
+      .from("menu_item_recommendations")
+      .select("menu_item_id")
+      .eq("recommendation_id", recommendationId);
+
+    if (!relatedLinks || relatedLinks.length === 0) return;
+
+    const ids = relatedLinks.map((r) => r.menu_item_id);
+
+    // Remove itself
+    const filteredIds = ids.filter((x) => x !== id);
+
+    if (filteredIds.length === 0) return;
+
+    // -----------------------------------------
+    // 4. FETCH MENU ITEMS matching those IDs
+    // -----------------------------------------
+    const { data: similarItems } = await supabase
+      .from("menu_items")
+      .select(`
+        id,
+        name,
+        price,
+        discount,
+        image_url,
+        restaurant:restaurant_id (
+          id,
+          name,
+          image_url
+        )
+      `)
+      .in("id", filteredIds);
+
+    setSimilar(similarItems || []);
+  }
+
+  if (!item) return <p className="p-4">Loading...</p>;
 
   return (
     <div className="flex flex-col min-h-screen bg-white relative overflow-hidden">
-      {/* Back Button */}
-      <button className="mb-3 ml-3 sm:ml-6">
-        <ArrowLeft size={28} className="text-black" />
+
+      <button onClick={() => navigate(-1)} className="mb-3 ml-3">
+        <ArrowLeft size={28} />
       </button>
 
-      {/* Header Card */}
-      {header.map((item, index) => (
-        <div
-          key={index}
-          className="bg-[#FFC533] w-[350px] md:w-[700px] rounded-t-[70px] shadow-md relative flex flex-col items-center mx-auto mt-20 p-6 pt-40"
-        >
-          {/* Food Image */}
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2">
-            <img
-              src={`/Recommend Food/${item.file}.png`}
-              alt={item.name}
-              className="w-40 h-44 sm:w-52 sm:h-56 object-contain"
-            />
-          </div>
+      <div className="bg-[#FFC533] w-[350px] md:w-[700px] rounded-t-[70px] shadow-md mx-auto mt-20 p-6 pt-40 relative flex flex-col items-center">
 
-          {/* Text Content */}
-          <div className="w-full text-left">
-            <p className="text-[30px] sm:text-[34px] font-semibold style-neuton text-black leading-tight">
-              {item.name}
-            </p>
-            <p className="text-[18px] sm:text-[20px] text-gray-800 style-poppins -mt-2 ml-6 sm:ml-10">
-              – {item.restaurant}
-            </p>
+        {/* DISCOUNT BADGE ON HEADER */}
+        {item.discount > 0 && (
+          <span className="absolute -bottom-3 -right-1 bg-[#CFB53C] text-black text-sm font-bold px-3 py-1 rounded-full shadow-lg z-20">
+            {item.discount}% OFF
+          </span>
+        )}
 
-            <div className="flex items-start justify-between mt-3 pr-6 sm:pr-10 relative style-neuton">
-              <p className="text-[32px] sm:text-[38px] font-bold text-gray-900">₱{item.price}</p>
-              <p className="text-black text-lg sm:text-[30px] font-semibold sm:-mt-5">☆☆☆☆☆</p>
-
-              {item.discount && (
-                <span className="absolute top-16 -right-6 sm:-right-6 text-[14px] sm:text-[18px] bg-[#CFB53C] text-black px-2 py-[1px] rounded-full">
-                  ₱{item.discount} off
-                </span>
-              )}
-            </div>
-          </div>
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2">
+          <img
+            src={item.image_url || "/images/default-food.png"}
+            className="w-50 h-54 object-cover rounded-full"
+          />
         </div>
-      ))}
 
-      {/* KEY INGREDIENTS */}
-      <div className="mt-6 px-4 sm:px-6">
-        <h2 className="text-black style-neuton text-[26px] sm:text-[30px] mb-3">Key Ingredients</h2>
+        <div className="w-full text-left">
+          <p className="text-[30px] font-bold text-black leading-tight">
+            {item.name}
+          </p>
 
-        <div className="flex gap-3 bg-[#FFFAE2] p-3 rounded-xl overflow-x-auto shadow-md">
-          {ingredients.map((item) => (
-            <div
-              key={item.file}
-              className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-white border border-white shadow-[0_20px_20px_-2px_rgba(207,181,60,0.6)] rounded-xl flex items-center justify-center"
-            >
-              <img
-                src={`/ingredients/${item.file}.png`}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `/ingredients/${item.file}.jpg`;
-                }}
-                alt={item.name}
-                className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
-              />
-            </div>
-          ))}
+          <p className="text-[18px] text-gray-800 -mt-2 ml-6">
+            – {restaurant?.name}
+          </p>
+
+          {item.description && (
+            <p className="text-gray-700 mt-2 ml-6">{item.description}</p>
+          )}
+
+          <p className="text-[32px] font-bold text-gray-900 mt-3">
+            ₱{item.price}
+          </p>
         </div>
       </div>
 
-      {/* SIMILAR DISHES */}
-      <div className="mt-6 px-4 sm:px-6 flex flex-col">
-        <h2 className="style-neuton text-black mb-3 text-[26px] sm:text-[30px]">Similar Dish</h2>
+      {similar.length > 0 && (
+        <div className="mt-6 px-4 flex flex-col">
+          <h2 className="text-black mb-3 text-[26px] font-semibold">
+            Similar Dish
+          </h2>
 
-        <div className="grid grid-cols-2 gap-6 sm:gap-20 pb-20">
-          {similar.map((item) => (
-            <div
-              key={item.file}
-              className="relative bg-white rounded-2xl border border-b-[4px] border-[#CFB53C] pt-16 pb-4 px-3 sm:px-4 flex flex-col items-center shadow-[0_25px_20px_-2px_rgba(207,181,60,0.6)]"
-            >
+          <div className="grid grid-cols-2 gap-6 pb-20">
+            {similar.map((sim) => (
               <div
-                className={`absolute left-1/2 -translate-x-1/2 ${
-                  item.file === "48" ? "-top-11" : "-top-25 sm:-top-20"
-                }`}
+                key={sim.id}
+                onClick={() => navigate(`/details/${sim.id}`)}
+                className="relative bg-white rounded-2xl border border-b-[4px] border-[#CFB53C] pt-14 sm:pt-18 pb-4 px-2 mt-5 sm:mt-10 flex flex-col items-center shadow-lg cursor-pointer"
               >
-                <img
-                src={`/similar/${item.file}.png`}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `/similar/${item.file}.jpg`;
-                }}
-                alt={item.file}
-                className={`object-contain ${
-                  item.file === "48"
-                    ? "w-48 h-32"  
-                    : "w-40 h-50 sm:w-45 sm:h-40" 
-                }`}
-              />
-              </div>
 
-              <div className="flex flex-col mt-5 text-left w-full">
-                <h3 className="font-semibold text-gray-900 text-[20px] sm:text-[25px] style-neuton leading-tight">
-                  {item.name}
-                </h3>
-                <p className="text-gray-600 text-[14px] sm:text-[18px] style-poppins -mt-1">– {item.restaurant}</p>
-                <p className="text-yellow-500 text-[12px] sm:text-[20px] font-semibold mt-1 leading-tight">★★★★☆</p>
+                {/* DISCOUNT BADGE FOR SIMILAR ITEMS */}
+                {sim.discount > 0 && (
+                  <span className="absolute bottom-5 sm:bottom-10 right-12 sm:right-140 bg-[#CFB53C] text-black text-xs font-bold px-2 py-1 rounded-full shadow-lg z-20">
+                    {sim.discount}% OFF
+                  </span>
+                )}
 
-                <div className="flex items-center gap-6 sm:gap-12 mt-3 style-neuton">
-                  <p className="text-black font-semibold text-[20px] sm:text-[25px]">₱ {item.price}.00</p>
-
-                  {item.discount && (
-                    <span className="absolute top-36 sm:top-40 left-[101px] text-[12px] sm:text-[15px] bg-[#CFB53C] text-black px-2 py-[2px] rounded-full">
-                      ₱{item.discount} off
-                    </span>
-                  )}
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+                  <img
+                    src={sim.image_url}
+                    className="w-45 sm:w-44 h-30 sm:h-35 object-cover rounded-xl"
+                  />
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* BOTTOM NAV */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-yellow-300 rounded-t-3xl shadow-md flex justify-around items-center py-2">
-        <button className="text-[#FFC533]"><House size={22} /></button>
-        <button className="text-black hover:text-[#FFC533]"><Menu size={22} /></button>
-        <button className="text-black hover:text-[#FFC533] transition"><MapPin size={22} /></button>
-        <button className="text-black hover:text-[#FFC533] transition"><Heart size={22} /></button>
-        <button className="text-black hover:text-[#FFC533] transition"><CircleUserRound size={22} /></button>
-      </div>
+                <div className="mt-10 sm:mt-16 w-full text-left">
+                  <h3 className="font-semibold text-gray-900 text-[20px]">
+                    {sim.name}
+                  </h3>
+                  <p className="text-gray-600 text-sm -mt-1">
+                    – {sim.restaurant?.name}
+                  </p>
+                  <p className="text-black font-semibold text-lg mt-5 sm:mt-6">
+                    ₱ {sim.price}
+                  </p>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -123,7 +123,7 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/detailspage" element={
+        <Route path="/details/:id" element={
           <ProtectedRoute>
             <DetailsPage />
           </ProtectedRoute>
