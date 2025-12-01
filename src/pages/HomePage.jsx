@@ -10,15 +10,11 @@ export default function HomePage() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // -------------------------------------
-  // LOAD CATEGORIES + DEFAULT MENU ITEMS
-  // -------------------------------------
   useEffect(() => {
     loadInitial();
   }, []);
 
   async function loadInitial() {
-    // Load recommendation categories
     const { data: catData, error: catErr } = await supabase
       .from("recommendation")
       .select("*")
@@ -28,13 +24,10 @@ export default function HomePage() {
 
     setCategories(catData || []);
 
-    // Load default menu_items
     loadDefaultMenuItems();
   }
 
-  // -------------------------------------
-  // DEFAULT ALL MENU ITEMS VIEW
-  // -------------------------------------
+  // ⭐ LOAD ALL MENU ITEMS + RATINGS
   async function loadDefaultMenuItems() {
     const { data, error } = await supabase
       .from("menu_items")
@@ -43,11 +36,14 @@ export default function HomePage() {
         name,
         price,
         discount,
+        description,
         image_url,
         restaurant:restaurant_id (
           id,
           name,
-          image_url,
+          image_url
+        ),
+        menu_item_reviews (
           rating
         )
       `);
@@ -57,19 +53,28 @@ export default function HomePage() {
       return setRecommended([]);
     }
 
-    const formatted = (data || []).map((item) => ({
-      id: item.id,
-      menuItem: item,
-      restaurant: item.restaurant,
-      discount: item.discount,
-    }));
+    const formatted = (data || []).map((item) => {
+      const ratings = item.menu_item_reviews || [];
+      const avg =
+        ratings.length > 0
+          ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+          : 0;
+
+      return {
+        id: item.id,
+        menuItem: {
+          ...item,
+          avg_rating: avg,
+        },
+        restaurant: item.restaurant,
+        discount: item.discount,
+      };
+    });
 
     setRecommended(formatted);
   }
 
-  // -------------------------------------
-  // FILTER MENU ITEMS BY recommendation_id
-  // -------------------------------------
+  // ⭐ FILTER MENU ITEMS BY CATEGORY + RATINGS
   async function loadMenuItemsByCategory(categoryId) {
     const { data, error } = await supabase
       .from("menu_item_recommendations")
@@ -84,7 +89,9 @@ export default function HomePage() {
           restaurant:restaurant_id (
             id,
             name,
-            image_url,
+            image_url
+          ),
+          menu_item_reviews (
             rating
           )
         )
@@ -96,19 +103,28 @@ export default function HomePage() {
       return setRecommended([]);
     }
 
-    const formatted = (data || []).map((row) => ({
-      id: row.menu_item.id,
-      menuItem: row.menu_item,
-      restaurant: row.menu_item.restaurant,
-      discount: row.menu_item.discount,
-    }));
+    const formatted = (data || []).map((row) => {
+      const item = row.menu_item;
+      const ratings = item.menu_item_reviews || [];
+      const avg =
+        ratings.length > 0
+          ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+          : 0;
+
+      return {
+        id: item.id,
+        menuItem: {
+          ...item,
+          avg_rating: avg,
+        },
+        restaurant: item.restaurant,
+        discount: item.discount,
+      };
+    });
 
     setRecommended(formatted);
   }
 
-  // -------------------------------------
-  // LISTEN FOR CATEGORY CHANGE
-  // -------------------------------------
   useEffect(() => {
     if (!selectedCategory) loadDefaultMenuItems();
     else loadMenuItemsByCategory(selectedCategory);
@@ -133,7 +149,7 @@ export default function HomePage() {
         />
       </div>
 
-      {/* RECOMMENDATION CATEGORIES */}
+      {/* CATEGORY BAR */}
       <div className="mt-6 px-4 sm:px-6 flex gap-4 overflow-x-auto w-full">
         {categories.map((cat) => (
           <div
@@ -152,19 +168,18 @@ export default function HomePage() {
 
       {/* TITLE */}
       <div className="mt-4 px-4 sm:px-6 flex flex-col">
-        <h2 className="text-xl sm:text-2xl font-semibold text-black mb-2 style-neuton">
+        <h2 className="text-xl sm:text-[32px] font-semibold text-black mb-2 style-neuton mt-1">
           {selectedCategory
             ? categories.find((c) => c.id === selectedCategory)?.name
             : "All Menu Items"}
         </h2>
 
-        {/* NO RESULTS */}
         {recommended.length === 0 && (
           <p className="text-gray-500 text-sm">No items found.</p>
         )}
 
         {/* ITEMS GRID */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 pb-24">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 pb-24 cursor-pointer">
           {recommended.map((rec) => {
             const m = rec.menuItem;
             const r = rec.restaurant;
@@ -175,32 +190,47 @@ export default function HomePage() {
                 onClick={() => navigate(`/details/${rec.id}`)}
                 className="relative bg-[#FFFAE2] border border-[#FCE8D8] rounded-2xl shadow-md flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-3"
               >
-                {/* DISCOUNT BADGE ABOVE PRICE */}
+                {/* DISCOUNT BADGE */}
                 {rec.discount > 0 && (
-                  <span className="absolute sm:top-23 top-62 sm:right-110 font-semibold bg-[#CFB53C] text-black text-xs sm:text-s px-2 py-1 rounded-full shadow-lg z-10">
+                  <span className="absolute top-2 left-2 bg-[#CFB53C] text-black text-xs sm:text-sm px-2 py-1 rounded-full shadow-lg z-10">
                     {rec.discount}% OFF
                   </span>
                 )}
 
                 <img
                   src={m.image_url || "/images/default-food.png"}
-                  className="w-full sm:w-35 h-full object-cover rounded-lg"
+                  className="w-full sm:w-35 h-42 sm:h-35 object-cover rounded-lg"
                 />
 
                 <div className="flex flex-col justify-center text-xs sm:text-sm w-full sm:w-auto mt-2 sm:mt-0">
                   <p className="font-bold text-sm sm:text-base">{m.name}</p>
                   <p className="text-xs text-gray-500">- {r?.name}</p>
 
-                  {/* Rating */}
-                  <p className="text-yellow-500 text-xs sm:text-xl mb-1">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <span key={i}>
-                        {i < Number(r?.rating || 0) ? "★" : "☆"}
-                      </span>
-                    ))}
+                  {/* ⭐ RATING */}
+                  <div className="flex items-center gap-1 mb-1">
+                    {Array.from({ length: 5 }, (_, i) => {
+                      if (m.avg_rating >= i + 1) {
+                        // Full star
+                        return <span key={i} className="text-yellow-400 text-[20px]">★</span>;
+                      } else if (m.avg_rating > i && m.avg_rating < i + 1) {
+                        // Half star (optional: or use ☆ if you don't have half star)
+                        return <span key={i} className="text-yellow-400 text-[20px]">⯨</span>;
+                      } else {
+                        // Empty star
+                        return <span key={i} className="text-gray-300 text-sm">☆</span>;
+                      }
+                    })}
+                    <p className="text-xs text-gray-600 ml-1">
+                      ({m.avg_rating > 0 ? m.avg_rating.toFixed(1) : "No rating"})
+                    </p>
+                  </div>
+
+                  {/* DESCRIPTION */}
+                  <p className="text-gray-600 text-xs sm:text-sm mb-1 line-clamp-2">
+                    {m.description || "No description available."}
                   </p>
 
-                  {/* PRICE WITH DISCOUNT APPLIED */}
+                  {/* PRICE */}
                   {rec.discount > 0 ? (
                     <div>
                       <p className="line-through text-gray-400">
@@ -211,7 +241,7 @@ export default function HomePage() {
                       </p>
                     </div>
                   ) : (
-                    <p className="font-semibold mt-4 sm:mt-3">₱{m.price}</p>
+                    <p className="font-semibold mt-1">₱{m.price}</p>
                   )}
                 </div>
               </div>
@@ -220,24 +250,37 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* BOTTOM NAV */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-2">
+      {/* NAVIGATION */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-3">
         <button onClick={() => navigate("/homepage")} className="text-[#FFC533]">
           <House size={26} />
         </button>
-        <button onClick={() => navigate("/categoriespage")} className="text-black hover:text-[#FFC533]">
+        <button
+          onClick={() => navigate("/categoriespage")}
+          className="text-black hover:text-[#FFC533]"
+        >
           <Menu size={22} />
         </button>
-        <button onClick={() => navigate("/locationpage")} className="text-black hover:text-[#FFC533]">
+        <button
+          onClick={() => navigate("/locationpage")}
+          className="text-black hover:text-[#FFC533]"
+        >
           <MapPin size={26} />
         </button>
-        <button onClick={() => navigate("/favoritepage")} className="text-black hover:text-[#FFC533]">
+        <button
+          onClick={() => navigate("/favoritepage")}
+          className="text-black hover:text-[#FFC533]"
+        >
           <Heart size={26} />
         </button>
-        <button onClick={() => navigate("/profilepage")} className="text-black hover:text-[#FFC533]">
+        <button
+          onClick={() => navigate("/profilepage")}
+          className="text-black hover:text-[#FFC533]"
+        >
           <CircleUserRound size={26} />
         </button>
       </div>
+
     </div>
   );
 }

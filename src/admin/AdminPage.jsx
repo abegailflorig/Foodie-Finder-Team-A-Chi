@@ -16,6 +16,8 @@ export default function AdminPage() {
     image_url: "",
     price_min: "",
     price_max: "",
+    latitude: "",   // added
+    longitude: "",  // added
   });
 
   const [recommendationData, setRecommendationData] = useState({
@@ -78,11 +80,17 @@ export default function AdminPage() {
       price_min: Number(restaurantData.price_min),
       price_max: Number(restaurantData.price_max),
       image_url: restaurantData.image_url || null,
+      latitude: restaurantData.latitude ? Number(restaurantData.latitude) : null,
+      longitude: restaurantData.longitude ? Number(restaurantData.longitude) : null,
     };
     const { error } = await supabase.from("restaurants").insert([payload]);
     if (error) return alert(error.message);
 
-    setRestaurantData({ name: "", address: "", cuisine: "", description: "", image: null, image_url: "", price_min: "", price_max: "" });
+    setRestaurantData({
+      name: "", address: "", cuisine: "", description: "",
+      image: null, image_url: "", price_min: "", price_max: "", latitude: "", longitude: ""
+    });
+
     const { data: restData } = await supabase.from("restaurants").select("*").order("name");
     setRestaurants(restData || []);
     alert("Restaurant added");
@@ -159,6 +167,15 @@ export default function AdminPage() {
               <input className="input" type="number" placeholder="Max Price" value={restaurantData.price_max}
                 onChange={(e) => setRestaurantData({ ...restaurantData, price_max: e.target.value })} />
             </div>
+
+            {/* Latitude / Longitude */}
+            <div className="flex gap-2">
+              <input className="input" type="number" step="0.000001" placeholder="Latitude" value={restaurantData.latitude}
+                onChange={(e) => setRestaurantData({ ...restaurantData, latitude: e.target.value })} />
+              <input className="input" type="number" step="0.000001" placeholder="Longitude" value={restaurantData.longitude}
+                onChange={(e) => setRestaurantData({ ...restaurantData, longitude: e.target.value })} />
+            </div>
+
             <input type="file" className="file-input"
               onChange={async (e) => {
                 const file = e.target.files[0];

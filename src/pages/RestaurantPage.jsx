@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router";
+import { useEffect, useState, useRef } from "react";
 import { Heart } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 
@@ -9,6 +9,7 @@ export default function RestaurantPage() {
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const mapRef = useRef(null);
 
   // Helper: Build public URL for restaurant/menu images
   const getImageUrl = (path, folder = "restaurant-images") => {
@@ -17,9 +18,9 @@ export default function RestaurantPage() {
     return `https://ajvlsivsfmtpaogjzaco.supabase.co/storage/v1/object/public/${folder}/${path}`;
   };
 
+  // Load restaurant + menu items
   useEffect(() => {
     const fetchRestaurant = async () => {
-      // Fetch restaurant
       const { data: rest, error: restErr } = await supabase
         .from("restaurants")
         .select("*")
@@ -28,7 +29,6 @@ export default function RestaurantPage() {
       if (restErr) return console.error(restErr);
       setRestaurant(rest);
 
-      // Fetch menu items
       const { data: menu, error: menuErr } = await supabase
         .from("menu_items")
         .select("*")
@@ -37,17 +37,54 @@ export default function RestaurantPage() {
       setMenuItems(menu);
 
       setLoading(false);
+
+      // Initialize map after restaurant loaded
+      if (rest.latitude && rest.longitude) initMap(rest.latitude, rest.longitude);
     };
 
     fetchRestaurant();
   }, [id]);
+
+  // Initialize Google Map
+  const initMap = (lat, lng) => {
+    if (!window.google) return;
+
+    const map = new window.google.maps.Map(mapRef.current, {
+      center: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      zoom: 15,
+    });
+
+    new window.google.maps.Marker({
+      position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      map,
+      title: restaurant.name,
+    });
+  };
+
+  // Load Google Maps script dynamically
+  useEffect(() => {
+    if (!restaurant) return;
+    // Example coordinates if missing
+    const lat = restaurant.latitude || 8.2296; // replace with actual if available
+    const lng = restaurant.longitude || 124.2452;
+
+    if (!window.google) {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyCrEanJf45zKlnIhTbZiz_sBN7DMCE-EnE`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => initMap(lat, lng);
+      document.head.appendChild(script);
+    } else {
+      initMap(lat, lng);
+    }
+  }, [restaurant]);
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (!restaurant) return <p className="text-center mt-10">Restaurant not found</p>;
 
   return (
     <div className="min-h-screen bg-white pb-10">
-
       {/* BANNER */}
       <img
         src={getImageUrl(restaurant.image_url)}
@@ -56,7 +93,6 @@ export default function RestaurantPage() {
       />
 
       <div className="px-5 mt-2">
-
         {/* TITLE + ADDRESS */}
         <h2 className="font-semibold text-lg sm:text-xl mt-1">{restaurant.name}</h2>
         <p className="text-[13px] sm:text-sm text-gray-700 leading-5 mt-1">
@@ -74,24 +110,9 @@ export default function RestaurantPage() {
           <span className="bg-yellow-300 px-3 py-1 rounded-full text-[11px] sm:text-xs">reviews</span>
         </div>
 
-        {/* MAP CARD */}
-        <div className="mt-2 w-full">
-          <div className="flex bg-white rounded-2xl shadow-md overflow-hidden border border-yellow-200 w-full">
-            <img
-              src="/places/map-preview.jpg"
-              className="w-50 h-12 sm:w-50 sm:h-15 object-cover"
-            />
-            <div className="flex-1 flex flex-col justify-center px-3">
-              <p className="text-[14px] sm:text-lg text-gray-700 font-medium">
-                Get There: — {/* You can add real time/distance */}
-              </p>
-              <button
-                className="text-[10px] sm:text-xs font-medium text-black bg-yellow-100 px-3 py-[4px] rounded-full border border-yellow-300 mt-1 w-max"
-              >
-                view map
-              </button>
-            </div>
-          </div>
+        {/* GOOGLE MAP */}
+        <div className="mt-2 w-full h-48 rounded-2xl overflow-hidden border border-yellow-200 shadow-md">
+          <div ref={mapRef} className="w-full h-full" />
         </div>
 
         {/* OUR PRODUCT */}
@@ -117,7 +138,6 @@ export default function RestaurantPage() {
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );

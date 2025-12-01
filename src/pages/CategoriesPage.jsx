@@ -220,7 +220,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* BOTTOM NAV */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border rounded-t-lg shadow-md flex justify-around py-2 z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-3 z-50">
         <button onClick={() => navigate("/homepage")}><House size={26} /></button>
         <button onClick={() => navigate("/categoriespage")} className="text-[#FFC533]"><Menu size={22} /></button>
         <button onClick={() => navigate("/locationpage")}><MapPin size={26} /></button>

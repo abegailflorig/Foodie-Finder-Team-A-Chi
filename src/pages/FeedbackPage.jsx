@@ -1,105 +1,67 @@
-import React from "react";
+import { useParams } from "react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 import { Star } from "lucide-react";
 
-const reviews = [
-  {
-    name: "Abegail",
-    time: "1 month ago",
-    text: "food quality, service, and atmosphere",
-    price: 250,
-    
-  },
-  {
-    name: "Nina Mae",
-    time: "2 months ago",
-    text: "fresh ingredients, and unbeatable prices!",
-    price: 250,
-  },
-];
-
 export default function FeedbackPage() {
-const ReviewCard = ({ name, time, text }) => {
-  return (
-    <div className="w-full sm:w-[90%] md:w-[80%]">
-      <div className="bg-yellow-50 rounded-2xl p-5 shadow-md mb-6 border border-yellow-200 drop-shadow-[0_4px_10px_#CFB53C] min-h-[130px] flex items-center">
+  const { id } = useParams();
+  const [reviews, setReviews] = useState([]);
+  const [restaurant, setRestaurant] = useState(null);
 
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className="font-semibold">{name}</p>
+  const renderStars = (rating) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (rating >= i) stars.push("★");
+      else if (rating + 0.5 >= i) stars.push("⯪");
+      else stars.push("☆");
+    }
+    return stars.join("");
+  };
 
-            <div className="flex text-yellow-500">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} size={14} fill="currentColor" />
-              ))}
-            </div>
+  useEffect(() => {
+    async function fetchData() {
+      const { data: restaurantData } = await supabase
+        .from("restaurants")
+        .select("name")
+        .eq("id", id)
+        .single();
+      setRestaurant(restaurantData);
 
-            <span className="text-gray-400">•</span>
-            <p className="text-gray-500 text-xs">{time}</p>
-          </div>
+      const { data: reviewData } = await supabase
+        .from("reviews")
+        .select(`
+          id,
+          rating,
+          review_text,
+          created_at,
+          profiles ( full_name )
+        `)
+        .eq("restaurant_id", id)
+        .order("created_at", { ascending: false });
+      setReviews(reviewData || []);
+    }
+    fetchData();
+  }, [id]);
 
-          <p className="text-gray-700 text-sm mt-3 leading-snug line-clamp-3">
-            {text}
-          </p>
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
-
+  if (!restaurant) return <p>Loading...</p>;
 
   return (
     <div className="px-4 py-6 font-serif">
-      {/* TITLE */}
       <h1 className="text-3xl font-bold mb-4">Rating & Reviews</h1>
-      <p className="text-2xl leading-5">
-        <span className="font-bold">Kinilaw na Tuna -</span>
-        <span className="font-[Poppins]"> Avodah Kitchen </span>
-      </p>
+      <p className="text-2xl leading-5"><span className="font-bold">{restaurant.name}</span></p>
 
-      {/* RATING SUMMARY */}
-      <div className="bg-white shadow-lg rounded-2xl p-5 border border-yellow-200 mb-6 flex items-start gap-10">
-        <div>
-          <p className="text-4xl font-bold">5.0</p>
-
-          <div className="flex text-yellow-500 mt-1 mb-1">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={20} fill="currentColor" />
-            ))}
-          </div>
-
-          <p className="text-gray-500 text-sm">All rating (1000+)</p>
-        </div>
-
-        <div className="flex-1">
-          {[5, 4, 3, 2, 1].map((star) => (
-            <div key={star} className="flex items-center mb-2 text-sm">
-              <span className="w-6">{star}★</span>
-              <div className="w-full h-2 bg-gray-200 rounded-full ml-2">
-                <div
-                  className="h-full bg-yellow-400 rounded-full"
-                  style={{ width: star * 15 + "%" }}
-                ></div>
-              </div>
+      {reviews.map((r) => (
+        <div key={r.id} className="bg-yellow-50 rounded-2xl p-5 shadow-md mb-6 border border-yellow-200 min-h-[130px] flex items-center">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold">{r.profiles?.full_name || "Anonymous"}</p>
+              <div className="flex text-yellow-500">{renderStars(r.rating)}</div>
+              <span className="text-gray-400">•</span>
+              <p className="text-gray-500 text-xs">{new Date(r.created_at).toLocaleDateString()}</p>
             </div>
-          ))}
+            <p className="text-gray-700 text-sm mt-3 leading-snug line-clamp-3">{r.review_text}</p>
+          </div>
         </div>
-      </div>
-
-      {/* FEEDBACK INPUT */}
-      <input
-        type="text"
-        placeholder="Your Feedback"
-        className="w-full border border-yellow-300 rounded-full px-4 py-2 mb-6 shadow-sm"
-      />
-
-      {/* REVIEWS TITLE */}
-      <h2 className="text-2xl font-bold mb-3">Reviews</h2>
-
-      {/* REVIEW CARDS */}
-      {reviews.map((r, i) => (
-        <ReviewCard key={i} {...r} />
       ))}
     </div>
   );
