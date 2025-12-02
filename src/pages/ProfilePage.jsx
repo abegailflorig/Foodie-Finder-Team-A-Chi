@@ -80,7 +80,7 @@ export default function ProfilePage() {
       </div>
       {/* NAVIGATION */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-3">
-        <button onClick={() => navigate("/homepage")} className="text-[#FFC533]">
+        <button onClick={() => navigate("/homepage")} className="text-black hover:text-[#FFC533]">
           <House size={26} />
         </button>
         <button onClick={() => navigate("/categoriespage")} className="text-black hover:text-[#FFC533]">
@@ -92,7 +92,7 @@ export default function ProfilePage() {
         <button onClick={() => navigate("/favoritepage")} className="text-black hover:text-[#FFC533]">
           <Heart size={26} />
         </button>
-        <button onClick={() => navigate("/profilepage")} className="text-black hover:text-[#FFC533]">
+        <button onClick={() => navigate("/profilepage")} className="text-[#FFC533] hover:text-black">
           <CircleUserRound size={26} />
         </button>
       </div>
