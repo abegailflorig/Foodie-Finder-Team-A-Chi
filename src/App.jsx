@@ -12,7 +12,7 @@ import DetailsPage from "./pages/DetailsPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import LocationPage from "./pages/LocationPage";
 import RestaurantPage from "./pages/RestaurantPage"; // Formerly Cupsilog
-import FeedbackPage from "./pages/FeedbackPage"; // Reviews
+import ResFeedback from "./pages/ResFeedback"; // Reviews
 import FavoritePage from "./pages/FavoritePage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./admin/AdminPage";
@@ -104,7 +104,7 @@ export default function App() {
         <Route path="/categoriespage" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
         <Route path="/locationpage" element={<ProtectedRoute><LocationPage /></ProtectedRoute>} />
         <Route path="/restaurant/:id" element={<ProtectedRoute><RestaurantPage /></ProtectedRoute>} />
-        <Route path="/restaurant/:id/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
+        <Route path="/restaurant/:id/feedback" element={<ProtectedRoute><ResFeedback /></ProtectedRoute>} />
         <Route path="/favoritepage" element={<ProtectedRoute><FavoritePage /></ProtectedRoute>} />
         <Route path="/profilepage" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 

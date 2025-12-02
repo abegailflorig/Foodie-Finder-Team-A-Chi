@@ -1,30 +1,46 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import { supabase } from "../lib/supabaseClient";
+import LoadingPage from "../pages/LoadingPage";
 
-export default function ProtectedRoute({ children }) {
-  const [user, setUser] = useState(null);
+function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data } = await supabase.auth.getSession(); // v2 method
-      setUser(data.session?.user ?? null);
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setUserRole(null);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (error || !data) {
+        setUserRole(null);
+      } else {
+        setUserRole(data.role);
+      }
+
       setLoading(false);
     };
 
-    fetchUser();
-
-    // Listen for auth changes (login/logout)
-    const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    checkUser();
   }, []);
 
-  if (loading) return <p>Loading...</p>; // show while checking session
-  if (!user) return <Navigate to="/login" replace />; // redirect if not logged in
+  if (loading) return <LoadingPage />; // Show loading until role is confirmed
+  if (!userRole) return <Navigate to="/landing" replace />;
 
-  return children;
+  // Only allow 'user' role
+  if (userRole !== "user") return <Navigate to="/adminpage" replace />;
+
+  return <>{children}</>; // Render children only if user role = 'user'
 }
+
+export default ProtectedRoute;

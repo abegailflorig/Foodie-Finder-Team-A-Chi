@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react"; 
 import { supabase } from "../lib/supabaseClient";
-import { Upload, Store, Tags, ChefHat } from "lucide-react";
+import { Upload, Store, Tags, ChefHat, Menu } from "lucide-react";
 
 export default function AdminPage() {
   const [restaurants, setRestaurants] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [meals, setMeals] = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false); // dropdown toggle
 
   const [restaurantData, setRestaurantData] = useState({
     name: "",
@@ -16,8 +17,8 @@ export default function AdminPage() {
     image_url: "",
     price_min: "",
     price_max: "",
-    latitude: "",   // added
-    longitude: "",  // added
+    latitude: "",
+    longitude: "",
   });
 
   const [recommendationData, setRecommendationData] = useState({
@@ -66,12 +67,19 @@ export default function AdminPage() {
     return data.publicUrl;
   }
 
-  // Add restaurant
+  // Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/"; // redirect after logout
+  };
+
+  // Add restaurant and log location
   const handleAddRestaurant = async () => {
     if (!restaurantData.name || !restaurantData.price_min || !restaurantData.price_max) {
       alert("Please fill required restaurant fields.");
       return;
     }
+
     const payload = {
       name: restaurantData.name,
       address: restaurantData.address,
@@ -80,11 +88,28 @@ export default function AdminPage() {
       price_min: Number(restaurantData.price_min),
       price_max: Number(restaurantData.price_max),
       image_url: restaurantData.image_url || null,
-      latitude: restaurantData.latitude ? Number(restaurantData.latitude) : null,
-      longitude: restaurantData.longitude ? Number(restaurantData.longitude) : null,
     };
-    const { error } = await supabase.from("restaurants").insert([payload]);
+
+    const { data: newRestaurant, error } = await supabase
+      .from("restaurants")
+      .insert([payload])
+      .select()
+      .single();
+
     if (error) return alert(error.message);
+
+    if (restaurantData.latitude && restaurantData.longitude) {
+      const locationPayload = {
+        restaurant_id: newRestaurant.id,
+        latitude: Number(restaurantData.latitude),
+        longitude: Number(restaurantData.longitude),
+        created_at: new Date().toISOString(),
+      };
+      const { error: locError } = await supabase
+        .from("location_logs")
+        .insert([locationPayload]);
+      if (locError) console.error("Error logging location:", locError);
+    }
 
     setRestaurantData({
       name: "", address: "", cuisine: "", description: "",
@@ -93,7 +118,7 @@ export default function AdminPage() {
 
     const { data: restData } = await supabase.from("restaurants").select("*").order("name");
     setRestaurants(restData || []);
-    alert("Restaurant added");
+    alert("Restaurant added and location logged!");
   };
 
   // Add recommendation
@@ -108,13 +133,12 @@ export default function AdminPage() {
     alert("Recommendation added");
   };
 
-  // Add menu item with multiple recommendations and meals
+  // Add menu item
   const handleAddMenuItem = async () => {
     if (!menuItemData.restaurant_id || !menuItemData.recommendation_ids.length || !menuItemData.meal_ids.length || !menuItemData.name || !menuItemData.price) {
       return alert("Fill all menu item fields");
     }
 
-    // Insert menu item first
     const { data: menuItem, error } = await supabase.from("menu_items").insert([{
       restaurant_id: menuItemData.restaurant_id,
       name: menuItemData.name,
@@ -125,14 +149,12 @@ export default function AdminPage() {
 
     if (error) return alert(error.message);
 
-    // Insert into menu_item_recommendations (many-to-many)
     if (menuItemData.recommendation_ids.length) {
       const recPayload = menuItemData.recommendation_ids.map(id => ({ menu_item_id: menuItem.id, recommendation_id: id }));
       const { error: recError } = await supabase.from("menu_item_recommendations").insert(recPayload);
       if (recError) console.error(recError);
     }
 
-    // Insert into menu_item_meals (many-to-many)
     if (menuItemData.meal_ids.length) {
       const mealPayload = menuItemData.meal_ids.map(id => ({ menu_item_id: menuItem.id, meal_id: id }));
       const { error: mealError } = await supabase.from("menu_item_meals").insert(mealPayload);
@@ -144,7 +166,24 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 relative">
+      
+      {/* Top Right Menu */}
+      <div className="absolute top-6 right-6">
+        <div className="relative">
+          <button className="flex items-center gap-2 border px-4 py-2 rounded-lg bg-white shadow" onClick={() => setMenuOpen(!menuOpen)}>
+            <Menu /> Menu
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg z-50">
+              <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={handleLogout}>
+                Log Out
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <h1 className="text-4xl font-bold text-center mb-10 text-gray-700">Admin Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
@@ -168,7 +207,6 @@ export default function AdminPage() {
                 onChange={(e) => setRestaurantData({ ...restaurantData, price_max: e.target.value })} />
             </div>
 
-            {/* Latitude / Longitude */}
             <div className="flex gap-2">
               <input className="input" type="number" step="0.000001" placeholder="Latitude" value={restaurantData.latitude}
                 onChange={(e) => setRestaurantData({ ...restaurantData, latitude: e.target.value })} />
@@ -212,7 +250,7 @@ export default function AdminPage() {
               {restaurants.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
 
-            {/* Recommendations circle choices */}
+            {/* Recommendations */}
             <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
               {recommendations.map((r) => {
                 const selected = menuItemData.recommendation_ids.includes(r.id);
@@ -235,7 +273,7 @@ export default function AdminPage() {
               })}
             </div>
 
-            {/* Meals circle choices */}
+            {/* Meals */}
             <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
               {meals.map((m) => {
                 const selected = menuItemData.meal_ids.includes(m.id);
