@@ -21,4 +21,4 @@ The Foodie Finder application is a web and mobile platform designed to help user
    git clone https://github.com/abegailflorig/foodie-finder-team-a-chi.git
 
 2. Netlify Link:
-   https://foodiefinderapp.netlify.app/homepage
+   https://foodiefinderapp.netlify.app
