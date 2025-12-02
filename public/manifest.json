@@ -1,0 +1,12 @@
+{
+  "short_name": "Foodie Finder",
+  "name": "Foodie Finder Web App",
+  "icons": [
+    { "src": "/primary-logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/secondary-logo.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000"
+}
