@@ -106,20 +106,6 @@ export default function LoginPage() {
         >
           Login
         </button>
-
-        {/* Social Buttons */}
-        <div className="flex flex-col gap-3 w-full max-w-lg mt-6 text-lg md:text-xl style-neuton">
-
-          <button className="flex items-center justify-center gap-4 md:gap-5 bg-[#FFC533] border-[#CFB53C] shadow-xl py-3 rounded-full border hover:bg-[#CFB53C] transition">
-            <FaFacebookF /> Continue w/ Facebook
-          </button>
-
-          <button className="flex items-center justify-center gap-4 md:gap-5 bg-[#FFC533] border-[#CFB53C] shadow-xl py-3 rounded-full border hover:bg-[#CFB53C] transition">
-            <FaGoogle /> Continue w/ Google
-          </button>
-
-        </div>
-
       </div>
     </div>
   );
