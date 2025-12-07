@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router"; 
 import { useEffect, useState, useRef } from "react";
 import { ArrowLeft, Heart } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
@@ -32,24 +32,20 @@ export default function RestaurantPage() {
         if (restRes.error) throw restRes.error;
         setRestaurant(restRes.data);
 
-        // Fetch menu items with average_rating
-        const menuRes = await supabase.from("menu_items").select("*").eq("restaurant_id", id);
+        // Fetch menu items from restaurant_menus table
+        const menuRes = await supabase
+          .from("restaurant_menus")
+          .select("id, item_name")
+          .eq("restaurant_id", id)
+          .order("item_name");
         if (menuRes.error) throw menuRes.error;
         setMenuItems(menuRes.data);
 
-        // Fetch latest location
-        const locRes = await supabase
-          .from("location_logs")
-          .select("latitude, longitude")
-          .eq("restaurant_id", id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (!locRes.error && locRes.data) {
+        // Fetch restaurant coordinates
+        if (restRes.data.latitude && restRes.data.longitude) {
           setRestaurantLocation({
-            lat: parseFloat(locRes.data.latitude),
-            lng: parseFloat(locRes.data.longitude),
+            lat: parseFloat(restRes.data.latitude),
+            lng: parseFloat(restRes.data.longitude),
           });
         }
       } catch (err) {
@@ -152,10 +148,10 @@ export default function RestaurantPage() {
           onClick={() => navigate(`/restaurant/${id}/feedback`)}
         >
           <p className="flex items-center gap-2 text-sm sm:text-base">
-            {restaurant.overall_rating && (
-              <span className="text-[15px] sm:text-[16px] mr-1">{restaurant.overall_rating.toFixed(1)}</span>
+            {restaurant.rating && (
+              <span className="text-[15px] sm:text-[16px] mr-1">{restaurant.rating.toFixed(1)}</span>
             )}
-            {renderStars(restaurant.overall_rating)}
+            {renderStars(restaurant.rating)}
           </p>
           <span className="bg-[#CFB53C] px-3 py-1 rounded-full text-[14px] sm:text-xs">reviews</span>
         </div>
@@ -164,19 +160,16 @@ export default function RestaurantPage() {
           <div ref={mapRef} className="w-full h-full" />
         </div>
 
-        <h3 className="style-neuton font-semibold text-[30px] mt-5 mb-2">Our Product</h3>
-        <div className="space-y-4">
+        <h3 className="style-neuton font-semibold text-[30px] mt-5 mb-2">Menu</h3>
+
+        {/* Display menu items in 2 columns */}
+        <div className="grid grid-cols-2 gap-3">
           {menuItems.map((p) => (
             <div
               key={p.id}
-              className="bg-[#FFF9E8] rounded-2xl p-2 shadow-sm border border-yellow-100 flex items-center gap-3"
+              className="bg-[#FFF9E8] rounded-2xl p-3 shadow-sm border border-yellow-100 flex flex-col gap-2"
             >
-              <img src={getImageUrl(p.image_url, "menu-items")} className="w-20 h-20 object-cover rounded-xl" />
-              <div className="flex-1">
-                <h4 className="font-semibold text-s sm:text-[20px]">{p.name}</h4>
-                <p className="flex gap-1">{renderStars(p.average_rating)}</p>
-                <p className="text-[13px] sm:text-sm font-medium">₱ {p.price}</p>
-              </div>
+              <h4 className="font-semibold text-sm sm:text-[16px] truncate">{p.item_name}</h4>
               <Heart
                 className={`cursor-pointer ${favorites[p.id] ? "text-red-500" : "text-gray-300"}`}
                 onClick={() => toggleFavorite(p.id)}

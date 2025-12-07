@@ -1,54 +1,31 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Upload, Store, Tags, ChefHat, Menu } from "lucide-react";
 
 export default function AdminPage() {
   const [restaurants, setRestaurants] = useState([]);
-  const [recommendations, setRecommendations] = useState([]);
-  const [meals, setMeals] = useState([]);
-  const [menuOpen, setMenuOpen] = useState(false); // dropdown toggle
-
+  const [categories, setCategories] = useState([]);
+  const [menuItemData, setMenuItemData] = useState({
+    restaurant_id: "",
+    item_name: "",
+  });
   const [restaurantData, setRestaurantData] = useState({
     name: "",
     address: "",
-    cuisine: "",
-    description: "",
-    image: null,
-    image_url: "",
-    price_min: "",
-    price_max: "",
-    latitude: "",
-    longitude: "",
-  });
-
-  const [recommendationData, setRecommendationData] = useState({
-    name: "",
-    image: null,
+    category_id: "",
+    image: "",
     image_url: "",
   });
+  const [menuOpen, setMenuOpen] = useState(false); // dropdown toggle
 
-  const [menuItemData, setMenuItemData] = useState({
-    restaurant_id: "",
-    recommendation_ids: [],
-    meal_ids: [],
-    name: "",
-    price: "",
-    description: "",
-    image: null,
-    image_url: "",
-  });
-
-  // Load restaurants, recommendations, and meals
+  // Load restaurants and categories
   useEffect(() => {
     async function loadData() {
       const { data: restData } = await supabase.from("restaurants").select("*").order("name");
       setRestaurants(restData || []);
 
-      const { data: recData } = await supabase.from("recommendation").select("*").order("name");
-      setRecommendations(recData || []);
-
-      const { data: mealData } = await supabase.from("meals").select("*").order("name");
-      setMeals(mealData || []);
+      const { data: catData } = await supabase.from("restaurant_categories").select("*").order("name");
+      setCategories(catData || []);
     }
     loadData();
   }, []);
@@ -67,107 +44,55 @@ export default function AdminPage() {
     return data.publicUrl;
   }
 
-  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/"; // redirect after logout
+    window.location.href = "/";
   };
 
-  // Add restaurant and log location
+  // Add Restaurant
   const handleAddRestaurant = async () => {
-    if (!restaurantData.name || !restaurantData.price_min || !restaurantData.price_max) {
-      alert("Please fill required restaurant fields.");
-      return;
+    if (!restaurantData.name || !restaurantData.category_id) {
+      return alert("Please fill required fields");
     }
 
     const payload = {
       name: restaurantData.name,
       address: restaurantData.address,
-      cuisine: restaurantData.cuisine,
-      description: restaurantData.description,
-      price_min: Number(restaurantData.price_min),
-      price_max: Number(restaurantData.price_max),
+      category_id: restaurantData.category_id ? Number(restaurantData.category_id) : null,
       image_url: restaurantData.image_url || null,
     };
 
-    const { data: newRestaurant, error } = await supabase
-      .from("restaurants")
-      .insert([payload])
-      .select()
-      .single();
-
+    const { data: newRestaurant, error } = await supabase.from("restaurants").insert([payload]).select().single();
     if (error) return alert(error.message);
 
-    if (restaurantData.latitude && restaurantData.longitude) {
-      const locationPayload = {
-        restaurant_id: newRestaurant.id,
-        latitude: Number(restaurantData.latitude),
-        longitude: Number(restaurantData.longitude),
-        created_at: new Date().toISOString(),
-      };
-      const { error: locError } = await supabase
-        .from("location_logs")
-        .insert([locationPayload]);
-      if (locError) console.error("Error logging location:", locError);
-    }
-
     setRestaurantData({
-      name: "", address: "", cuisine: "", description: "",
-      image: null, image_url: "", price_min: "", price_max: "", latitude: "", longitude: ""
+      name: "", address: "", latitude: "", longitude: "", category_id: "", rating: "", image: null, image_url: "",
     });
 
     const { data: restData } = await supabase.from("restaurants").select("*").order("name");
     setRestaurants(restData || []);
-    alert("Restaurant added and location logged!");
+    alert("Restaurant added successfully!");
   };
 
-  // Add recommendation
-  const handleAddRecommendation = async () => {
-    if (!recommendationData.name) return alert("Recommendation name required");
-    const { error } = await supabase.from("recommendation").insert([{ name: recommendationData.name, image_url: recommendationData.image_url }]);
-    if (error) return alert(error.message);
-
-    setRecommendationData({ name: "", image: null, image_url: "" });
-    const { data: recData } = await supabase.from("recommendation").select("*").order("name");
-    setRecommendations(recData || []);
-    alert("Recommendation added");
-  };
-
-  // Add menu item
+  // Add Menu Item
   const handleAddMenuItem = async () => {
-    if (!menuItemData.restaurant_id || !menuItemData.recommendation_ids.length || !menuItemData.meal_ids.length || !menuItemData.name || !menuItemData.price) {
+    if (!menuItemData.restaurant_id || !menuItemData.item_name) {
       return alert("Fill all menu item fields");
     }
 
-    const { data: menuItem, error } = await supabase.from("menu_items").insert([{
+    const { data: menuItem, error } = await supabase.from("restaurant_menus").insert([{
       restaurant_id: menuItemData.restaurant_id,
-      name: menuItemData.name,
-      price: Number(menuItemData.price),
-      description: menuItemData.description,
-      image_url: menuItemData.image_url || null
+      item_name: menuItemData.item_name,
     }]).select().single();
 
     if (error) return alert(error.message);
 
-    if (menuItemData.recommendation_ids.length) {
-      const recPayload = menuItemData.recommendation_ids.map(id => ({ menu_item_id: menuItem.id, recommendation_id: id }));
-      const { error: recError } = await supabase.from("menu_item_recommendations").insert(recPayload);
-      if (recError) console.error(recError);
-    }
-
-    if (menuItemData.meal_ids.length) {
-      const mealPayload = menuItemData.meal_ids.map(id => ({ menu_item_id: menuItem.id, meal_id: id }));
-      const { error: mealError } = await supabase.from("menu_item_meals").insert(mealPayload);
-      if (mealError) console.error(mealError);
-    }
-
-    setMenuItemData({ restaurant_id: "", recommendation_ids: [], meal_ids: [], name: "", price: "", description: "", image: null, image_url: "" });
-    alert("Menu item added with multiple recommendations and meals!");
+    setMenuItemData({ restaurant_id: "", item_name: "" });
+    alert("Menu item added successfully!");
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 relative">
-      
       {/* Top Right Menu */}
       <div className="absolute top-6 right-6">
         <div className="relative">
@@ -196,24 +121,11 @@ export default function AdminPage() {
               onChange={(e) => setRestaurantData({ ...restaurantData, name: e.target.value })} />
             <input className="input" placeholder="Address" value={restaurantData.address}
               onChange={(e) => setRestaurantData({ ...restaurantData, address: e.target.value })} />
-            <input className="input" placeholder="Cuisine" value={restaurantData.cuisine}
-              onChange={(e) => setRestaurantData({ ...restaurantData, cuisine: e.target.value })} />
-            <textarea className="textarea" placeholder="Description" value={restaurantData.description}
-              onChange={(e) => setRestaurantData({ ...restaurantData, description: e.target.value })} />
-            <div className="flex gap-2">
-              <input className="input" type="number" placeholder="Min Price" value={restaurantData.price_min}
-                onChange={(e) => setRestaurantData({ ...restaurantData, price_min: e.target.value })} />
-              <input className="input" type="number" placeholder="Max Price" value={restaurantData.price_max}
-                onChange={(e) => setRestaurantData({ ...restaurantData, price_max: e.target.value })} />
-            </div>
-
-            <div className="flex gap-2">
-              <input className="input" type="number" step="0.000001" placeholder="Latitude" value={restaurantData.latitude}
-                onChange={(e) => setRestaurantData({ ...restaurantData, latitude: e.target.value })} />
-              <input className="input" type="number" step="0.000001" placeholder="Longitude" value={restaurantData.longitude}
-                onChange={(e) => setRestaurantData({ ...restaurantData, longitude: e.target.value })} />
-            </div>
-
+            <select className="input" value={restaurantData.category_id}
+              onChange={(e) => setRestaurantData({ ...restaurantData, category_id: e.target.value })}>
+              <option value="">Select Category</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
             <input type="file" className="file-input"
               onChange={async (e) => {
                 const file = e.target.files[0];
@@ -225,21 +137,6 @@ export default function AdminPage() {
           <button className="btn mt-4 w-full" onClick={handleAddRestaurant}>Add Restaurant</button>
         </div>
 
-        {/* Add Recommendation */}
-        <div className="bg-white rounded-2xl shadow-md p-6 border">
-          <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4"><Tags /> Add Recommendation</h2>
-          <input className="input" placeholder="Recommendation Name" value={recommendationData.name}
-            onChange={(e) => setRecommendationData({ ...recommendationData, name: e.target.value })} />
-          <input type="file" className="file-input mt-3"
-            onChange={async (e) => {
-              const file = e.target.files[0];
-              if (!file) return;
-              const publicUrl = await uploadImage("recommendation-images", file);
-              setRecommendationData({ ...recommendationData, image: file, image_url: publicUrl });
-            }} />
-          <button className="btn mt-4 w-full" onClick={handleAddRecommendation}>Add Recommendation</button>
-        </div>
-
         {/* Add Menu Item */}
         <div className="bg-white rounded-2xl shadow-md p-6 border md:col-span-2">
           <h2 className="text-2xl font-semibold flex items-center gap-2 mb-4"><ChefHat /> Add Menu Item</h2>
@@ -249,70 +146,11 @@ export default function AdminPage() {
               <option value="">Select Restaurant</option>
               {restaurants.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-
-            {/* Recommendations */}
-            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-              {recommendations.map((r) => {
-                const selected = menuItemData.recommendation_ids.includes(r.id);
-                return (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => {
-                      if (selected) {
-                        setMenuItemData({ ...menuItemData, recommendation_ids: menuItemData.recommendation_ids.filter(id => id !== r.id) });
-                      } else {
-                        setMenuItemData({ ...menuItemData, recommendation_ids: [...menuItemData.recommendation_ids, r.id] });
-                      }
-                    }}
-                    className={`px-3 py-1 rounded-full border ${selected ? "bg-yellow-400 text-white" : "bg-gray-200 text-gray-700"}`}
-                  >
-                    {r.name}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Meals */}
-            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-              {meals.map((m) => {
-                const selected = menuItemData.meal_ids.includes(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      if (selected) {
-                        setMenuItemData({ ...menuItemData, meal_ids: menuItemData.meal_ids.filter(id => id !== m.id) });
-                      } else {
-                        setMenuItemData({ ...menuItemData, meal_ids: [...menuItemData.meal_ids, m.id] });
-                      }
-                    }}
-                    className={`px-3 py-1 rounded-full border ${selected ? "bg-green-400 text-white" : "bg-gray-200 text-gray-700"}`}
-                  >
-                    {m.name}
-                  </button>
-                );
-              })}
-            </div>
-
-            <input className="input" placeholder="Food Name" value={menuItemData.name}
-              onChange={(e) => setMenuItemData({ ...menuItemData, name: e.target.value })} />
-            <input className="input" type="number" placeholder="Price" value={menuItemData.price}
-              onChange={(e) => setMenuItemData({ ...menuItemData, price: e.target.value })} />
+            <input className="input" placeholder="Menu Item Name" value={menuItemData.item_name}
+              onChange={(e) => setMenuItemData({ ...menuItemData, item_name: e.target.value })} />
           </div>
-          <textarea className="textarea mt-4" placeholder="Description" value={menuItemData.description}
-            onChange={(e) => setMenuItemData({ ...menuItemData, description: e.target.value })} />
-          <input type="file" className="file-input mt-4"
-            onChange={async (e) => {
-              const file = e.target.files[0];
-              if (!file) return;
-              const publicUrl = await uploadImage("food-images", file);
-              setMenuItemData({ ...menuItemData, image: file, image_url: publicUrl });
-            }} />
           <button className="btn w-full mt-4" onClick={handleAddMenuItem}>Add Menu Item</button>
         </div>
-
       </div>
     </div>
   );

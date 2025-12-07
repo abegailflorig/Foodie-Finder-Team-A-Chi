@@ -1,207 +1,287 @@
 import { useEffect, useState } from "react";
-import { House, MapPin, Heart, CircleUserRound, Menu } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router";
+import { House, MapPin, Heart, CircleUserRound, Menu, X } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix default Leaflet marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+  iconUrl: "/leaflet/marker-icon.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
+});
+
+const LOCATIONIQ_KEY = "pk.1526e4b7f7d13fc301eec3ef3492c130";
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
 
-  const [recommended, setRecommended] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
+  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
+
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // Search states
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
+  const [addressInput, setAddressInput] = useState("");
+  const [location, setLocation] = useState({ lat: 14.5995, lng: 120.9842 }); // Manila
+  const [suggestions, setSuggestions] = useState([]);
+
+  // 📌 Reverse geocoding for PIN location → ADDRESS
+  async function reverseGeocode(lat, lng) {
+    try {
+      const res = await fetch(
+        `https://us1.locationiq.com/v1/reverse.php?key=${LOCATIONIQ_KEY}&lat=${lat}&lon=${lng}&format=json`
+      );
+      const data = await res.json();
+      return data?.display_name || "";
+    } catch (err) {
+      console.error("Reverse geocode failed", err);
+      return "";
+    }
+  }
 
   useEffect(() => {
-    loadInitial();
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      setUser({ id: session.user.id });
+
+      const popupShown = sessionStorage.getItem("locationPopupShown");
+      if (!popupShown) {
+        setShowLocationPopup(true);
+        sessionStorage.setItem("locationPopupShown", "true");
+      }
+
+      await getCurrentUser(session.user.id);
+    };
+    checkSession();
   }, []);
 
-  async function loadInitial() {
-    const { data: catData, error: catErr } = await supabase
-      .from("recommendation")
+  async function getCurrentUser(userId) {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("latitude, longitude, address")
+        .eq("id", userId)
+        .single();
+
+      const lat = profile?.latitude ? parseFloat(profile.latitude) : location.lat;
+      const lng = profile?.longitude ? parseFloat(profile.longitude) : location.lng;
+
+      setLocation({ lat, lng });
+      setAddressInput(profile?.address || "");
+
+      loadCategories();
+      loadAllRestaurants(lat, lng);
+    } catch (err) {
+      console.error(err);
+      setShowLocationPopup(true);
+    }
+  }
+
+  async function loadCategories() {
+    const { data } = await supabase
+      .from("restaurant_categories")
       .select("*")
       .order("name");
 
-    if (catErr) console.error(catErr);
-    setCategories(catData || []);
-
-    loadRecommendedMenuItems();
+    setCategories(data || []);
   }
 
-  // 🔍 SEARCH MENU ITEMS + RESTAURANTS
-  async function searchAll(keyword) {
-    if (!keyword || keyword.trim() === "") {
-      setSearchResults([]);
+  async function loadAllRestaurants(userLat, userLng) {
+    const { data } = await supabase.from("restaurants").select("*");
+
+    const withDistance = (data || []).map((r) => ({
+      ...r,
+      distance: getDistance(
+        userLat,
+        userLng,
+        parseFloat(r.latitude),
+        parseFloat(r.longitude)
+      ),
+    }));
+
+    withDistance.sort((a, b) => a.distance - b.distance);
+
+    setRestaurants(withDistance);
+    setFilteredRestaurants(withDistance);
+  }
+
+  function getDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function handleCategoryClick(categoryId) {
+    if (selectedCategory === categoryId) {
+      setSelectedCategory(null);
+      setFilteredRestaurants(restaurants);
       return;
     }
 
-    // Search MENU ITEMS
-    const { data: menuItems, error: menuErr } = await supabase
-      .from("menu_items")
-      .select(`
-        id,
-        name,
-        description,
-        price,
-        discount,
-        image_url,
-        restaurant:restaurant_id (
-          id,
-          name,
-          image_url
-        ),
-        menu_item_reviews ( rating )
-      `)
-      .ilike("name", `%${keyword}%`);
+    setSelectedCategory(categoryId);
 
-    if (menuErr) console.error(menuErr);
+    const filtered = restaurants.filter((r) => r.category_id === categoryId);
+    filtered.sort((a, b) => a.distance - b.distance);
 
-    const menuFormatted = (menuItems || []).map((m) => {
-      const ratings = m.menu_item_reviews || [];
-      const avg = ratings.length
-        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-        : 0;
-
-      return {
-        type: "menu",
-        id: m.id,
-        menuItem: { ...m, avg_rating: avg },
-        restaurant: m.restaurant,
-        discount: m.discount || 0,
-      };
-    });
-
-    // Search RESTAURANTS
-    const { data: restData, error: restErr } = await supabase
-      .from("restaurants")
-      .select("id, name, address, image_url")
-      .ilike("name", `%${keyword}%`);
-
-    if (restErr) console.error(restErr);
-
-    const restFormatted = (restData || []).map((r) => ({
-      type: "restaurant",
-      ...r,
-    }));
-
-    // Combine — menu items FIRST
-    setSearchResults([...menuFormatted, ...restFormatted]);
+    setFilteredRestaurants(filtered);
   }
 
-  async function loadRecommendedMenuItems() {
-    const { data, error } = await supabase
-      .from("menu_item_recommendations")
-      .select(`
-        score,
-        menu_item:menu_item_id (
-          id,
-          name,
-          price,
-          discount,
-          description,
-          image_url,
-          restaurant:restaurant_id (
-            id,
-            name,
-            image_url
-          ),
-          menu_item_reviews (
-            rating
-          )
-        )
-      `)
-      .gt("score", 0)
-      .order("score", { ascending: false })
-      .limit(20);
+  async function fetchSuggestions(query) {
+    if (!query.trim()) return setSuggestions([]);
 
-    if (error) {
-      console.error(error);
-      return setRecommended([]);
+    try {
+      const res = await fetch(
+        `https://us1.locationiq.com/v1/autocomplete.php?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(
+          query
+        )}&format=json`
+      );
+      const data = await res.json();
+      setSuggestions(data || []);
+
+      if (data?.[0]) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        setLocation({ lat, lng });
+      }
+    } catch (err) {
+      console.error("Autocomplete failed", err);
+      setSuggestions([]);
+    }
+  }
+
+  async function saveLocation(selectedLat, selectedLng, selectedAddress) {
+    const lat = selectedLat || location.lat;
+    const lng = selectedLng || location.lng;
+
+    // 📌 If address blank → auto-fill from reverse geocode
+    let address = selectedAddress || addressInput;
+    if (!address) {
+      address = await reverseGeocode(lat, lng);
+      setAddressInput(address);
     }
 
-    const formatted = (data || []).map((row) => {
-      const item = row.menu_item;
-      const ratings = item.menu_item_reviews || [];
-      const avg = ratings.length
-        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-        : 0;
+    if (!user?.id || !address) return;
 
-      return {
-        id: item.id,
-        menuItem: { ...item, avg_rating: avg },
-        restaurant: item.restaurant,
-        discount: row.discount || 0,
-        score: row.score,
-      };
-    });
+    await supabase
+      .from("profiles")
+      .update({ latitude: lat, longitude: lng, address })
+      .eq("id", user.id);
 
-    setRecommended(formatted);
+    setLocation({ lat, lng });
+    setAddressInput(address);
+    setShowLocationPopup(false);
+    loadAllRestaurants(lat, lng);
   }
 
-  async function incrementScore(menuItemId) {
-    const { error } = await supabase.rpc("increment_menu_item_score_global", {
-      p_menu_item_id: menuItemId,
-    });
+  // 📌 PIN MARKER (updates automatically)
+  function DraggableMarker() {
+    const [position, setPosition] = useState(location);
+    const map = useMap();
 
-    if (error) console.error(error);
-    loadRecommendedMenuItems();
+    useEffect(() => {
+      map.flyTo([location.lat, location.lng], 13, { duration: 1.2 });
+      setPosition(location);
+    }, [location, map]);
+
+    const eventHandlers = {
+      async dragend(e) {
+        const latLng = e.target.getLatLng();
+        const newPos = { lat: latLng.lat, lng: latLng.lng };
+
+        setPosition(newPos);
+        setLocation(newPos);
+
+        // 📌 Auto-correct address input when pin moved
+        const addr = await reverseGeocode(newPos.lat, newPos.lng);
+        if (addr) setAddressInput(addr);
+      },
+    };
+
+    return <Marker position={position} draggable={true} eventHandlers={eventHandlers} />;
   }
 
-  async function loadMenuItemsByCategory(categoryId) {
-    const { data, error } = await supabase
-      .from("menu_item_recommendations")
-      .select(`
-        menu_item:menu_item_id (
-          id,
-          name,
-          price,
-          discount,
-          description,
-          image_url,
-          restaurant:restaurant_id (
-            id,
-            name,
-            image_url
-          ),
-          menu_item_reviews (
-            rating
-          )
-        )
-      `)
-      .eq("recommendation_id", categoryId);
-
-    if (error) {
-      console.error(error);
-      return setRecommended([]);
-    }
-
-    const formatted = (data || []).map((row) => {
-      const item = row.menu_item;
-      const ratings = item.menu_item_reviews || [];
-      const avg = ratings.length
-        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-        : 0;
-
-      return {
-        id: item.id,
-        menuItem: { ...item, avg_rating: avg },
-        restaurant: item.restaurant,
-        discount: row.discount || 0,
-      };
-    });
-
-    setRecommended(formatted);
-  }
-
-  useEffect(() => {
-    if (!selectedCategory) loadRecommendedMenuItems();
-    else loadMenuItemsByCategory(selectedCategory);
-  }, [selectedCategory]);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    sessionStorage.removeItem("locationPopupShown");
+    window.location.href = "/landing";
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+
+      {/* LOCATION POPUP */}
+      {showLocationPopup && (
+        <div className="fixed inset-0 bg-[#CFB53C] bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-4 rounded-lg w-11/12 sm:w-1/2 flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <h2 className="font-bold text-xl">Set Your Location</h2>
+              <button onClick={() => setShowLocationPopup(false)}>
+                <X />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Type your address"
+              value={addressInput}
+              onChange={(e) => {
+                setAddressInput(e.target.value);
+                fetchSuggestions(e.target.value);
+              }}
+              className="border p-2 rounded w-full"
+            />
+
+            {suggestions.length > 0 && (
+              <ul className="border rounded bg-white max-h-48 overflow-y-auto">
+                {suggestions.map((s) => (
+                  <li
+                    key={s.place_id}
+                    className="p-2 cursor-pointer hover:bg-gray-100"
+                    onClick={() =>
+                      saveLocation(parseFloat(s.lat), parseFloat(s.lon), s.display_name)
+                    }
+                  >
+                    {s.display_name}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="h-64 w-full mt-2">
+              <MapContainer
+                center={[location.lat, location.lng]}
+                zoom={13}
+                className="h-full w-full rounded"
+              >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <DraggableMarker />
+              </MapContainer>
+            </div>
+
+            <button
+              onClick={() => saveLocation()}
+              className="bg-[#CFB53C] p-2 rounded font-bold text-white mt-2"
+            >
+              Save Location
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* HEADER */}
       <div className="bg-[#FFC533] h-64 sm:h-80 rounded-b-3xl flex flex-col items-center justify-center p-4">
@@ -210,195 +290,56 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* SEARCH BAR */}
-      <div className="relative -mt-6 flex justify-center font-regular text-lg sm:text-xl text-black style-neuton">
-        <input
-          type="text"
-          placeholder="Search Bar"
-          value={searchKeyword}
-          onChange={(e) => {
-            const text = e.target.value;
-            setSearchKeyword(text);
-            searchAll(text);
-          }}
-          className="w-11/12 sm:w-10/12 bg-white border border-t-[#FCE8D8] border-[#CFB53C] border-b-3 rounded-full px-4 py-3 sm:px-5 sm:py-4 drop-shadow-[0_4px_12px_#CFB53C] focus:outline-none"/>
-      </div>
-
-      {/* CATEGORY BAR */}
-      <div className="mt-6 px-4 sm:px-6 flex gap-4 overflow-x-auto w-full">
+      {/* CATEGORIES */}
+      <div className="mt-6 px-4 flex gap-4 overflow-x-auto w-full">
         {categories.map((cat) => (
           <div
             key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className="flex flex-col items-center flex-shrink-0 cursor-pointer"
+            className={`flex flex-col items-center flex-shrink-0 cursor-pointer ${
+              selectedCategory === cat.id ? "opacity-80" : "opacity-100"
+            }`}
+            onClick={() => handleCategoryClick(cat.id)}
           >
-            <img
-              src={cat.image_url || "/images/default-category.png"}
-              className="w-18 h-18 sm:w-24 sm:h-20 object-cover rounded-lg opacity-90 border-b-4 border-b-[#FFC533] border-[#FCE8D8] drop-shadow-[0_1px_2px_#FFC533]"
-            />
-            <p className="text-xs sm:text-sm mt-1 text-center style-poppins">{cat.name}</p>
+            <div
+              className={`rounded-lg border-b-4 ${
+                selectedCategory === cat.id
+                  ? "border-[#FFC533] scale-105"
+                  : "border-[#FFC533]"
+              } transition-all`}
+            >
+              <img
+                src={cat.image_url || "/images/default-category.png"}
+                className="w-18 h-18 sm:w-24 sm:h-20 object-cover rounded-lg"
+              />
+            </div>
+            <p className="text-xs sm:text-sm mt-1 text-center">{cat.name}</p>
           </div>
         ))}
       </div>
 
-      {/* TITLE */}
-      <div className="mt-4 px-4 sm:px-6 flex flex-col">
-        <h2 className="text-xl sm:text-[32px] font-regular text-black mb-2 style-neuton mt-1">
-          {searchKeyword.length > 0
-            ? "Search Results"
-            : selectedCategory
-            ? categories.find((c) => c.id === selectedCategory)?.name
-            : "Recommended for You"}
-        </h2>
+      {/* RESTAURANTS */}
+      <div className="mt-4 px-4 flex flex-col">
+        <h2 className="text-xl sm:text-[32px] text-black mb-2 mt-1">Restaurants</h2>
 
-        {/* 🔍 SEARCH RESULTS */}
-        {searchKeyword.length > 0 ? (
-          searchResults.length === 0 ? (
-            <p className="text-gray-500 text-sm">No results found.</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 pb-24 cursor-pointer">
-
-              {searchResults.map((item) =>
-                item.type === "menu" ? (
-                  /*MENU ITEM SEARCH RESULT */
-                  <div
-                    key={item.id}
-                    onClick={() => navigate(`/details/${item.id}`)}
-                    className="relative bg-[#FFFAE2] border border-[#FCE8D8] rounded-2xl shadow-md flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-3"
-                  >
-                    {item.discount > 0 && (
-                      <span className="absolute top-2 left-2 bg-[#CFB53C] style-poppins text-black text-xs sm:text-sm px-2 py-1 rounded-full shadow-lg">
-                        {item.discount}% off
-                      </span>
-                    )}
-
-                    <img
-                      src={item.menuItem.image_url || "/images/default-food.png"}
-                      className="w-full sm:w-35 h-42 sm:h-35 object-cover rounded-lg"
-                    />
-
-                    <div className="flex flex-col justify-center text-xs sm:text-sm w-full sm:w-auto mt-2 sm:mt-0">
-                      <p className="font-bold text-[25px] sm:text-2xl style-neuton">{item.menuItem.name}</p>
-                      <p className="text-[18px] sm:text-sm text-gray-500 style-poppins">
-                        - {item.restaurant?.name}
-                      </p>
-
-                      {/* ⭐ RATING */}
-                      <div className="flex items-center gap-1 mb-1">
-                        {Array.from({ length: 5 }, (_, i) => {
-                          if (item.menuItem.avg_rating >= i + 1)
-                            return <span key={i} className="text-yellow-400 text-[20px]">★</span>;
-                          else if (item.menuItem.avg_rating > i && item.menuItem.avg_rating < i + 1)
-                            return <span key={i} className="text-yellow-400 text-[20px]">⯨</span>;
-                          else return <span key={i} className="text-gray-300 text-sm">☆</span>;
-                        })}
-                        <p className="text-[15px] text-gray-600 ml-1">
-                          ({item.menuItem.avg_rating > 0 ? item.menuItem.avg_rating.toFixed(1) : "No rating"})
-                        </p>
-                      </div>
-
-                      <p className="text-black text-[15px] sm:text-sm mb-1 line-clamp-2 style-poppins">
-                        {item.menuItem.description || "No description available."}
-                      </p>
-
-                      {item.discount > 0 ? (
-                        <div>
-                          <p className="line-through text-gray-400">₱{item.menuItem.price}</p>
-                          <p className="font-semibold text-red-600 text-base">
-                            ₱{(item.menuItem.price - (item.menuItem.price * item.discount) / 100).toFixed(2)}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="font-regular style-neuton text-[25px] sm:text-[20px] mt-1">₱{item.menuItem.price}</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  /* 🏠 RESTAURANT SEARCH RESULT */
-                  <div
-                    key={item.id}
-                    onClick={() => navigate(`/restaurant/${item.id}`)}
-                    className="bg-[#FFFAE2] border border-[#FCE8D8] rounded-2xl shadow-md p-3"
-                  >
-                    <img
-                      src={item.image_url || "/images/default-food.png"}
-                      className="w-full h-40 object-cover rounded-lg"
-                    />
-                    <p className="font-bold text-[22px] sm:text-[25px] mt-2 style-neuton">{item.name}</p>
-                    <p className="text-[14px] sm:text-[16px] ml-1 sm:ml-2 text-gray-600">-{item.address}</p>
-                  </div>
-                )
-              )}
-            </div>
-          )
-        ) : (
-          /*RECOMMENDED SECTION */
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 pb-24 cursor-pointer">
-            {recommended.map((rec) => {
-          const m = rec.menuItem;
-          const r = rec.restaurant;
-
-          const discountedPrice = rec.discount > 0
-            ? (m.price - (m.price * rec.discount) / 100).toFixed(2)
-            : null;
-
-          return (
+        <div className="grid grid-cols-2 gap-3 pb-24 cursor-pointer">
+          {filteredRestaurants.map((r) => (
             <div
-              key={rec.id}
-              onClick={() => {
-                incrementScore(rec.id);
-                navigate(`/details/${rec.id}`);
-              }}
-              className="relative bg-[#FFFAE2] border border-[#FCE8D8] rounded-2xl shadow-md flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-3"
+              key={r.id}
+              onClick={() => navigate(`/restaurant/${r.id}`)}
+              className="bg-[#FFFAE2] border border-[#FCE8D8] rounded-2xl shadow-md p-3"
             >
-              {rec.discount > 0 && (
-                <span className="absolute top-2 left-2 bg-[#CFB53C] text-black text-xs px-2 py-1 rounded-full shadow-lg">
-                  {rec.discount}% OFF
-                </span>
-              )}
-
               <img
-                src={m.image_url || "/images/default-food.png"}
-                className="w-full sm:w-35 h-42 sm:h-35 object-cover rounded-lg"
+                src={r.image_url || "/images/default-food.png"}
+                className="w-full h-40 object-cover rounded-lg"
               />
-
-              <div className="flex flex-col justify-center text-xs sm:text-sm w-full sm:w-auto mt-2 sm:mt-0">
-                <p className="font-bold text-[25px] sm:text-2xl style-neuton">{m.name}</p>
-                <p className="text-[18px] sm:text-sm text-gray-500 style-poppins font-medium">- {r?.name}</p>
-
-                {/* ⭐ Rating */}
-                <div className="flex items-center gap-1 mb-1">
-                  {Array.from({ length: 5 }, (_, i) => {
-                    if (m.avg_rating >= i + 1)
-                      return <span key={i} className="text-yellow-400 text-[20px]">★</span>;
-                    else if (m.avg_rating > i && m.avg_rating < i + 1)
-                      return <span key={i} className="text-yellow-400 text-[20px]">⯨</span>;
-                    else return <span key={i} className="text-gray-300 text-sm">☆</span>;
-                  })}
-                  <p className="text-[15px] text-gray-600 ml-1">
-                    ({m.avg_rating > 0 ? m.avg_rating.toFixed(1) : "No rating"})
-                  </p>
-                </div>
-
-                <p className="text-black text-[15px] sm:text-sm mb-1 line-clamp-2">
-                  {m.description}
-                </p>
-
-                {/* PRICE */}
-                {discountedPrice ? (
-                  <div>
-                    <p className="line-through text-gray-400">₱{m.price.toFixed(2)}</p>
-                    <p className="font-semibold text-red-600 text-base">₱{discountedPrice}</p>
-                  </div>
-                ) : (
-                  <p className="font-regular style-neuton text-[25px] sm:text-[20px]">₱{m.price.toFixed(2)}</p>
-                )}
-              </div>
+              <p className="font-bold text-[22px] mt-2">{r.name}</p>
+              <p className="text-[14px] text-gray-600">{r.address}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {r.distance.toFixed(2)} km away
+              </p>
             </div>
-          );
-        })}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* NAVIGATION */}
@@ -406,16 +347,13 @@ export default function HomePage() {
         <button onClick={() => navigate("/homepage")} className="text-[#FFC533]">
           <House size={26} />
         </button>
-        <button onClick={() => navigate("/categoriespage")} className="text-black hover:text-[#FFC533]">
-          <Menu size={22} />
-        </button>
-        <button onClick={() => navigate("/locationpage")} className="text-black hover:text-[#FFC533]">
+        <button onClick={() => navigate("/locationpage")}>
           <MapPin size={26} />
         </button>
-        <button onClick={() => navigate("/favoritepage")} className="text-black hover:text-[#FFC533]">
+        <button onClick={() => navigate("/favoritepage")}>
           <Heart size={26} />
         </button>
-        <button onClick={() => navigate("/profilepage")} className="text-black hover:text-[#FFC533]">
+        <button onClick={() => navigate("/profilepage")}>
           <CircleUserRound size={26} />
         </button>
       </div>
