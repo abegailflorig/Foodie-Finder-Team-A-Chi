@@ -73,7 +73,7 @@ export default function FavoritePage() {
       {/* HEADER */}
       <div className="bg-[#FFC533] h-48 rounded-b-3xl p-5 relative flex flex-col justify-between">
         <div className="flex justify-between items-start pt-2">
-          <div className="w-28 h-28 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-md ml-65 sm:ml-20">
+          <div className="w-28 h-28 sm:w-24 sm:h-24 rounded-full ml-auto sm:ml-auto md:ml-280 overflow-hidden bg-white flex items-center justify-center shadow-md ml-65 sm:ml-20">
             <img src="secondary-logo.png" alt="Foodie Finder" className="w-full h-full object-contain" />
           </div>
         </div>
