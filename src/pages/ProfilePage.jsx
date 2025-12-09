@@ -47,15 +47,23 @@ export default function ProfilePage() {
       <div className="bg-[#FFC533] h-48 rounded-b-3xl p-5 relative flex items-start"></div>
 
       {/* PROFILE IMAGE */}
-      <div className="w-full flex justify-center relative">
-        <div className="w-32 h-35 sm:w-40 sm:h-38 rounded-full overflow-hidden border-4 border-white shadow-lg -mt-14 z-10">
-          <img
-            src={profile?.profile_pic || "/images/profile.jpg"}
-            alt="profile"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </div>
+<div className="w-full flex justify-center relative">
+  <div className="w-32 h-35 sm:w-40 sm:h-38 rounded-full overflow-hidden border-4 border-white shadow-lg -mt-14 z-10">
+    <img
+      src={
+        profile?.image_url
+          ? (profile.image_url.startsWith("http")
+              ? profile.image_url
+              : `https://ajvlsivsfmtpaogjzaco.supabase.co/storage/v1/object/public/profile-images/${profile.image_url}`
+            )
+          : "/images/profile.jpg"
+      }
+      alt="profile"
+      className="w-full h-full object-cover"
+    />
+  </div>
+</div>
+
 
       {/* WHITE INFO CARD */}
       <div className="relative mx-6 mt-6 bg-white p-6 rounded-xl shadow-md border-l-[6px] border-[#FFC533]">
@@ -66,9 +74,6 @@ export default function ProfilePage() {
 
         <p className="font-semibold mt-4">Address :</p>
         <p className="text-gray-700 -mt-1 mb-3">{profile?.address || "Not provided"}</p>
-
-        <p className="font-semibold">Contact # :</p>
-        <p className="text-gray-700 -mt-1">{profile?.phone_number || "Not provided"}</p>
       </div>
 
       {/* LOGOUT BUTTON */}
@@ -84,7 +89,6 @@ export default function ProfilePage() {
       {/* NAVIGATION */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-3">
         <button onClick={() => navigate("/homepage")} className="text-black hover:text-[#FFC533]"><House size={26} /></button>
-        <button onClick={() => navigate("/categoriespage")} className="text-black hover:text-[#FFC533]"><Menu size={22} /></button>
         <button onClick={() => navigate("/locationpage")} className="text-black hover:text-[#FFC533]"><MapPin size={26} /></button>
         <button onClick={() => navigate("/favoritepage")} className="text-black hover:text-[#FFC533]"><Heart size={26} /></button>
         <button onClick={() => navigate("/profilepage")} className="text-[#FFC533] hover:text-black"><CircleUserRound size={26} /></button>

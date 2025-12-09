@@ -1,4 +1,4 @@
-import { House, MapPin, Heart, CircleUserRound, Menu } from "lucide-react";
+import { House, MapPin, Heart, CircleUserRound } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
@@ -15,17 +15,26 @@ export default function LocationPage() {
     return `https://ajvlsivsfmtpaogjzaco.supabase.co/storage/v1/object/public/${folder}/${path}`;
   };
 
+  // ⭐ Full + Half Star Renderer
+  const renderStars = (rating = 0) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (rating >= i) stars.push("★");
+      else if (rating + 0.5 >= i) stars.push("⯪");
+      else stars.push("☆");
+    }
+    return stars.join("");
+  };
+
   useEffect(() => {
     loadRestaurants();
   }, []);
 
-  // Load restaurants (all by default)
   async function loadRestaurants() {
     const { data, error } = await supabase
       .from("restaurants")
       .select("*")
       .order("name");
-
     if (error) console.error(error);
     setRestaurants(data || []);
   }
@@ -34,73 +43,57 @@ export default function LocationPage() {
   useEffect(() => {
     async function searchRestaurants() {
       if (!query || query.trim() === "") {
-        // No search -> show all
         loadRestaurants();
         return;
       }
 
-      // 1. Find restaurants where restaurant_menus.item_name ilike query
-      const { data: menuMatches, error: menuErr } = await supabase
+      const { data: menuMatches } = await supabase
         .from("restaurant_menus")
         .select("restaurant_id")
         .ilike("item_name", `%${query}%`);
 
-      if (menuErr) console.error(menuErr);
-
       const matchedIds = menuMatches?.map((m) => m.restaurant_id) || [];
 
-      // 2. Fetch restaurant details for matched IDs OR matching name/address
+      const orQueryParts = [];
+      if (matchedIds.length > 0) orQueryParts.push(`id.in.(${matchedIds.join(",")})`);
+      orQueryParts.push(`name.ilike.%${query}%`);
+      orQueryParts.push(`address.ilike.%${query}%`);
+
       const { data: restaurantData, error: restErr } = await supabase
         .from("restaurants")
         .select("*")
-        .or(
-          [
-            `id.in.(${matchedIds.join(",")})`,
-            `name.ilike.%${query}%`,
-            `address.ilike.%${query}%`
-          ].join(",")
-        )
+        .or(orQueryParts.join(","))
         .order("name");
 
       if (restErr) console.error(restErr);
-
       setRestaurants(restaurantData || []);
     }
 
     searchRestaurants();
   }, [query]);
 
-  // ⭐ Full + Half Star Renderer
-  const renderStars = (rating = 0) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      if (rating >= i) stars.push("★");       // full
-      else if (rating + 0.5 >= i) stars.push("⯪"); // half
-      else stars.push("☆");                   // empty
-    }
-    return stars.join("");
-  };
-
   return (
     <div className="min-h-screen bg-[#FFFAE2] flex flex-col">
-      <div className="px-4 pt-4 flex flex-col items-start">
+      {/* Search Input */}
+      <div className="px-4 pt-4">
         <input
           type="text"
           placeholder="Search Restaurant or Menu Item"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full sm:w-full text-[16px] sm:text-[18px] px-4 py-2 sm:py-3 border border-t-[#FCE8D8] border-[#FFC533] rounded-full bg-white shadow-md outline-none"
+          className="w-full text-[16px] sm:text-[18px] px-4 py-2 sm:py-3 border border-[#FFC533] rounded-full bg-white shadow-md outline-none"
         />
       </div>
 
-      <div className="px-4 mt-4">
+      {/* Restaurant List */}
+      <div className="px-4 mt-4 flex-1">
         <h2 className="text-[20px] sm:text-[30px] font-semibold style-neuton mb-3">
-          Nearby Restaurants
+          All Restaurants
         </h2>
 
         <div className="space-y-4 pb-28">
           {restaurants.length === 0 ? (
-            <p className="text-gray-500 text-sm">No restaurants found.</p>
+            <p className="text-gray-500 text-sm sm:text-base">No restaurants found.</p>
           ) : (
             restaurants.map((item) => (
               <div
@@ -108,30 +101,29 @@ export default function LocationPage() {
                 className="bg-white rounded-2xl border border-t-[#FCE8D8] border-[#CFB53C] drop-shadow-[0_6px_2px_#CFB53C] p-3 flex gap-3 w-full cursor-pointer"
                 onClick={() => navigate(`/restaurant/${item.id}`)}
               >
+                {/* Restaurant Image */}
                 <img
                   src={getImageUrl(item.image_url)}
                   alt={item.name}
-                  className="w-45 h-25 md:w-82 md:h-32 object-cover border-b-2 border-[#FFC533] rounded-[28px] shadow-sm flex-shrink-0"
-                  onError={(e) => {
-                    e.target.src = "/placeholder/default.png";
-                  }}
+                  className="w-38 h-30 sm:w-32 sm:h-32 md:w-96 md:h-36 object-cover rounded-2xl border-b-2 border-[#FFC533] shadow-sm flex-shrink-0"
+                  onError={(e) => { e.target.src = "/placeholder/default.png"; }}
                 />
 
                 <div className="flex flex-col flex-grow">
-                  <h3 className="font-semibold text-[20px] sm:text-[16px] md:text-[30px] style-neuton leading-tight">
+                  <h3 className="font-semibold text-[18px] sm:text-[20px] md:text-[28px] style-neuton leading-tight">
                     {item.name}
                   </h3>
 
-                  <p className="text-black text-[14px] sm:text-[12px] md:text-[16px] ml-2 style-poppins mt-1">
+                  <p className="text-black text-[10px] sm:text-[14px] md:text-[15px] mt-1 style-poppins">
                     Address: {item.address}
                   </p>
 
                   <div className="flex items-center gap-2 mt-2">
-                    <p className="text-[#FFC533] text-[20px] sm:text-[12px] md:text-[20px] font-medium">
-                      {renderStars(item.rating || 0)}
+                    <p className="text-[#FFC533] text-[16px] sm:text-[18px] md:text-[20px] font-medium">
+                      {renderStars(item.overall_rating || 0)}
                     </p>
 
-                    <span className="bg-[#CFB53C] text-black px-2 py-[1px] rounded-full text-[14px] sm:text-[10px] md:text-[14px]">
+                    <span className="bg-[#CFB53C] text-black px-2 py-[1px] rounded-full text-[12px] sm:text-[14px] md:text-[14px]">
                       reviews
                     </span>
                   </div>
@@ -148,31 +140,15 @@ export default function LocationPage() {
           <House size={26} />
         </button>
 
-        <button
-          onClick={() => navigate("/categoriespage")}
-          className="text-black hover:text-[#FFC533]"
-        >
-          <Menu size={22} />
-        </button>
-
-        <button
-          onClick={() => navigate("/locationpage")}
-          className="text-[#FFC533] hover:text-black"
-        >
+        <button onClick={() => navigate("/locationpage")} className="text-[#FFC533] hover:text-black">
           <MapPin size={26} />
         </button>
 
-        <button
-          onClick={() => navigate("/favoritepage")}
-          className="text-black hover:text-[#FFC533]"
-        >
+        <button onClick={() => navigate("/favoritepage")} className="text-black hover:text-[#FFC533]">
           <Heart size={26} />
         </button>
 
-        <button
-          onClick={() => navigate("/profilepage")}
-          className="text-black hover:text-[#FFC533]"
-        >
+        <button onClick={() => navigate("/profilepage")} className="text-black hover:text-[#FFC533]">
           <CircleUserRound size={26} />
         </button>
       </div>

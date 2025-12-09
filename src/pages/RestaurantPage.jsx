@@ -1,8 +1,8 @@
-import { useParams, useNavigate } from "react-router"; 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, Heart } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
 import L from "leaflet";
+import { supabase } from "../lib/supabaseClient";
 
 export default function RestaurantPage() {
   const { id } = useParams();
@@ -11,175 +11,289 @@ export default function RestaurantPage() {
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState({});
-  const [restaurantLocation, setRestaurantLocation] = useState(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [user, setUser] = useState(null);
+
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingCounts, setRatingCounts] = useState({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
 
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
-  const getImageUrl = (path, folder = "restaurant-images") => {
+  const getImageUrl = (path) => {
     if (!path) return "/places/placeholder.png";
     if (path.startsWith("http")) return path;
-    return `https://ajvlsivsfmtpaogjzaco.supabase.co/storage/v1/object/public/${folder}/${path}`;
+    return `https://ajvlsivsfmtpaogjzaco.supabase.co/storage/v1/object/public/restaurant-images/${path}`;
   };
 
-  // Fetch restaurant, menu items, location
+  // Load authenticated user
   useEffect(() => {
-    const fetchData = async () => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) setUser(data.user);
+    })();
+  }, []);
+
+  // Fetch restaurant, menu, favorites, rating counts
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+
+    const fetchAll = async () => {
       try {
         // Fetch restaurant
-        const restRes = await supabase.from("restaurants").select("*").eq("id", id).single();
-        if (restRes.error) throw restRes.error;
-        setRestaurant(restRes.data);
+        const { data: rest, error: restErr } = await supabase
+          .from("restaurants")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (restErr) throw restErr;
+        setRestaurant(rest);
 
-        // Fetch menu items from restaurant_menus table
-        const menuRes = await supabase
+        // Fetch menu items
+        const { data: menus } = await supabase
           .from("restaurant_menus")
           .select("id, item_name")
           .eq("restaurant_id", id)
-          .order("item_name");
-        if (menuRes.error) throw menuRes.error;
-        setMenuItems(menuRes.data);
+          .order("item_name", { ascending: true });
+        setMenuItems(menus || []);
 
-        // Fetch restaurant coordinates
-        if (restRes.data.latitude && restRes.data.longitude) {
-          setRestaurantLocation({
-            lat: parseFloat(restRes.data.latitude),
-            lng: parseFloat(restRes.data.longitude),
-          });
+        // Check if favorite
+        if (user?.id) {
+          const { data: fav } = await supabase
+            .from("favorites")
+            .select("id")
+            .eq("restaurant_id", id)
+            .eq("user_id", user.id)
+            .maybeSingle();
+          setIsFavorite(!!fav);
         }
+
+        // Initialize ratingCounts
+        const avg = rest?.rating_count
+          ? rest.overall_rating / rest.rating_count
+          : 0;
+        const bucket = Math.min(5, Math.max(1, Math.round(avg || 0)));
+        const fallback = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        fallback[bucket] = rest?.rating_count || 0;
+        setRatingCounts(fallback);
       } catch (err) {
-        console.error(err);
+        console.error("fetch error", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [id]);
+    fetchAll();
+  }, [id, user]);
 
-  // Initialize Leaflet map
+  // Initialize map
   useEffect(() => {
-    if (!restaurant || !mapRef.current || !restaurantLocation) return;
-
-    const { lat, lng } = restaurantLocation;
+    if (!restaurant) return;
+    const lat = Number(restaurant.latitude);
+    const lng = Number(restaurant.longitude);
+    if (!lat || !lng || !mapRef.current) return;
 
     if (!mapInstance.current) {
-      mapInstance.current = L.map(mapRef.current).setView([lat, lng], 15);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "© OpenStreetMap",
-      }).addTo(mapInstance.current);
+      mapInstance.current = L.map(mapRef.current, { zoomControl: false, attributionControl: false }).setView([lat, lng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapInstance.current);
     } else {
-      mapInstance.current.setView([lat, lng], 15);
+      mapInstance.current.setView([lat, lng], 14);
     }
 
-    // Remove previous markers
+    // Remove old markers
     mapInstance.current.eachLayer((layer) => {
       if (layer instanceof L.Marker) mapInstance.current.removeLayer(layer);
     });
 
     L.marker([lat, lng])
       .addTo(mapInstance.current)
-      .bindPopup(
-        `<b>${restaurant.name}</b><br>${restaurant.address}<br><img src="${getImageUrl(
-          restaurant.image_url
-        )}" width="100"/>`
-      );
-  }, [restaurant, restaurantLocation]);
+      .bindPopup(`<b>${restaurant.name}</b><br/>${restaurant.address}`);
+  }, [restaurant]);
 
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
-  if (!restaurant) return <p className="text-center mt-10">Restaurant not found</p>;
+  if (loading) return <div className="pt-10 text-center">Loading...</div>;
+  if (!restaurant) return <div className="pt-10 text-center">Restaurant not found</div>;
 
-  const toggleFavorite = (id) => setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
-
-  // Render stars for rating
-  const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating || 0);
-    const hasHalfStar = rating && rating - fullStars >= 0.5;
-
-    for (let i = 1; i <= 5; i++) {
-      let starIcon = "☆"; // empty
-      let className = "text-gray-400";
-      let style = { fontSize: "28px" };
-
-      if (rating) {
-        if (i <= fullStars) {
-          starIcon = "★"; // full star
-          className = "text-yellow-500";
-        } else if (hasHalfStar && i === fullStars + 1) {
-          starIcon = "⯨"; // half star
-          className = "text-yellow-500";
-        }
+  const toggleFavorite = async () => {
+    if (!user) { alert("Please sign in to favorite restaurants."); return; }
+    try {
+      if (isFavorite) {
+        await supabase.from("favorites").delete().match({ restaurant_id: Number(id), user_id: user.id });
+        setIsFavorite(false);
+      } else {
+        await supabase.from("favorites").insert({ restaurant_id: Number(id), user_id: user.id });
+        setIsFavorite(true);
       }
-
-      stars.push(
-        <span key={i} className={`${className}`} style={style}>
-          {starIcon}
-        </span>
-      );
+    } catch (err) {
+      console.error("favorite error", err);
+      alert("Unable to update favorite.");
     }
-
-    return stars;
   };
 
+  const submitRating = async () => {
+    if (!userRating || userRating < 1) {
+      alert("Please select a star rating before submitting.");
+      return;
+    }
+
+    try {
+      const newOverall = Number(restaurant.overall_rating || 0) + Number(userRating);
+      const newCount = Number(restaurant.rating_count || 0) + 1;
+
+      const { error } = await supabase
+        .from("restaurants")
+        .update({
+          overall_rating: newOverall,
+          rating_count: newCount,
+        })
+        .eq("id", id);
+      if (error) throw error;
+
+      setRestaurant((prev) => ({
+        ...prev,
+        overall_rating: newOverall,
+        rating_count: newCount,
+      }));
+
+      const bucket = Math.min(5, Math.max(1, Math.round(userRating)));
+      setRatingCounts((prev) => ({ ...prev, [bucket]: (prev[bucket] || 0) + 1 }));
+
+      setUserRating(0);
+      alert("Rating submitted. Thank you!");
+    } catch (err) {
+      console.error("submit rating error", err);
+      alert("Unable to submit rating. Try again later.");
+    }
+  };
+
+  // ⭐ Star renderer
+  const renderStarsStatic = (ratingNumber) => {
+    const full = Math.floor(ratingNumber || 0);
+    const half = (ratingNumber - full) >= 0.5;
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (i <= full) stars.push(<span key={i} className="text-yellow-500 text-xl">★</span>);
+      else if (i === full + 1 && half) stars.push(<span key={i} className="text-yellow-500 text-xl">⯨</span>);
+      else stars.push(<span key={i} className="text-gray-300 text-xl">★</span>);
+    }
+    return <div className="flex gap-1">{stars}</div>;
+  };
+
+  const averageRating = restaurant.rating_count
+    ? restaurant.overall_rating / restaurant.rating_count
+    : 0;
+
+  const totalRatings = Object.values(ratingCounts).reduce((a, b) => a + b, 0) || restaurant.rating_count || 1;
+  const barWidth = (count) => `${Math.round((count / totalRatings) * 100)}%`;
+
+  const renderSelectableStars = () => [1, 2, 3, 4, 5].map((s) => (
+    <button key={s} onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)} onClick={() => setUserRating(s)} className="text-2xl focus:outline-none">
+      <span className={s <= (hoverRating || userRating) ? "text-yellow-500" : "text-gray-300"}>★</span>
+    </button>
+  ));
+
+  const midIndex = Math.ceil(menuItems.length / 2);
+  const column1 = menuItems.slice(0, midIndex);
+  const column2 = menuItems.slice(midIndex);
+
   return (
-    <div className="min-h-screen bg-white pb-10">
-      <button onClick={() => navigate("/locationpage")} className="mb-3 ml-3">
-        <ArrowLeft size={28} />
-      </button>
+    <div className="min-h-screen bg-[#FFFAE2] pb-10 px-2 sm:px-6">
+      {/* Back button */}
+      <div className="pt-3">
+        <button onClick={() => navigate(-1)} className="p-1">
+          <ArrowLeft size={28} />
+        </button>
+      </div>
 
-      <img
-        src={getImageUrl(restaurant.image_url)}
-        className="w-full h-48 sm:h-56 object-cover shadow-md"
-        style={{ borderTopLeftRadius: "35px", borderTopRightRadius: "35px", marginTop: "20px" }}
-      />
-
-      <div className="px-5 mt-2">
-        <h2 className="style-neuton font-semibold text-[30px] sm:text-[32px] mt-1">{restaurant.name}</h2>
-        <p className="style-poppins text-[15px] sm:text-[16px] text-gray-700 mt-1 ml-3 sm:ml-5">
-          <span className="font-semibold">Address:</span> {restaurant.address}
-        </p>
-
-        <div
-          className="flex items-center gap-3 mt-2 cursor-pointer"
-          onClick={() => navigate(`/restaurant/${id}/feedback`)}
-        >
-          <p className="flex items-center gap-2 text-sm sm:text-base">
-            {restaurant.rating && (
-              <span className="text-[15px] sm:text-[16px] mr-1">{restaurant.rating.toFixed(1)}</span>
-            )}
-            {renderStars(restaurant.rating)}
-          </p>
-          <span className="bg-[#CFB53C] px-3 py-1 rounded-full text-[14px] sm:text-xs">reviews</span>
+      {/* Image */}
+      <div className="mt-3 w-full sm:w-full">
+        <div className="overflow-hidden shadow-md rounded-t-[35px]">
+          <img src={getImageUrl(restaurant.image_url)} alt={restaurant.name} className="w-full h-48 sm:h-64 object-cover" />
         </div>
+      </div>
 
-        <div className="mt-2 w-full h-48 rounded-2xl overflow-hidden border border-yellow-200 shadow-md">
+      {/* Favorite */}
+      <div className="flex flex-col items-center -mt-4">
+        <button onClick={toggleFavorite} aria-label="favorite restaurant" className="bg-transparent border-none">
+          <Heart size={32} fill={isFavorite ? "#FF7979" : "none"} stroke={isFavorite ? "#FF7979" : "#D1D5DB"} className="transition-colors duration-200"/>
+        </button>
+      </div>
+
+      {/* Name & Address */}
+      <div className="text-center mt-2">
+        <h1 className="style-neuton text-xl sm:text-3xl md:text-5xl font-semibold">{restaurant.name}</h1>
+        <p className="style-poppins text-sm sm:text-base text-gray-700 mt-1">Address: {restaurant.address}</p>
+      </div>
+
+      {/* Ratings */}
+      <div className="mt-4 w-full px-2 sm:px-6">
+        <div className="w-full bg-white rounded-[20px] p-4 flex flex-col sm:flex-row gap-4 shadow-md">
+          <div className="w-full sm:w-24 h-24 sm:h-24 rounded-md flex flex-col items-center justify-center mx-auto sm:mx-0">
+            <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
+            <div className="mt-1">{renderStarsStatic(averageRating)}</div>
+            <div className="text-xs text-gray-500 mt-2 text-center">
+              All rating ({restaurant.rating_count || 0})
+            </div>
+          </div>
+          <div className="flex-1">
+            {[5, 4, 3, 2, 1].map((r) => (
+              <div key={r} className="flex items-center gap-2 mb-1">
+                <div className="w-6 text-s font-medium">{r}★</div>
+                <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div className="h-3 rounded-full bg-yellow-400" style={{ width: barWidth(ratingCounts[r]) }} />
+                </div>
+                <div className="w-8 text-xs text-right">{ratingCounts[r] || 0}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Rate me */}
+      <div className="mt-4 w-full px-2 sm:px-6">
+        <div className="style-neuton text-xl font-semibold">Rate me:</div>
+        <div className="flex gap-2 mt-2">{renderSelectableStars()}</div>
+        <div className="mt-3">
+          <button onClick={submitRating} className="style-poppins bg-[#CFB53C] text-black px-5 py-1 rounded-full text-sm">
+            Submit
+          </button>
+        </div>
+      </div>
+
+      {/* Map */}
+      <div className="mt-4">
+        <div className="style-poppins text-xl font-semibold mb-2">View map:</div>
+        <div className="h-32 sm:h-48 rounded-xl overflow-hidden border border-yellow-200 shadow-sm">
           <div ref={mapRef} className="w-full h-full" />
         </div>
+      </div>
 
-        <h3 className="style-neuton font-semibold text-[30px] mt-5 mb-2">Menu</h3>
-
-        {/* Display menu items in 2 columns */}
-        <div className="grid grid-cols-2 gap-3">
-          {menuItems.map((p) => (
-            <div
-              key={p.id}
-              className="bg-[#FFF9E8] rounded-2xl p-3 shadow-sm border border-yellow-100 flex flex-col gap-2"
-            >
-              <h4 className="font-semibold text-sm sm:text-[16px] truncate">{p.item_name}</h4>
-              <Heart
-                className={`cursor-pointer ${favorites[p.id] ? "text-red-500" : "text-gray-300"}`}
-                onClick={() => toggleFavorite(p.id)}
-                size={22}
-                fill={favorites[p.id] ? "red" : "none"}
-              />
+      {/* 2-column Menu */}
+      <div className="mt-4 bg-[#FCE8D8] rounded-xl p-4 border-[#CFB53C] border-1 shadow-sm">
+        <h2 className="style-neuton text-center text-[30px] font-semibold mb-3">Menu List</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {[column1, column2].map((col, idx) => (
+            <div key={idx}>
+              <table className="w-full style-poppins text-s border border-[#d6c9b8] rounded-xl overflow-hidden">
+                <tbody>
+                  {col.length ? col.map((item) => (
+                    <tr key={item.id} className="border-b border-black last:border-b-0">
+                      <td className="py-2 px-3">{item.item_name}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td className="py-3 text-center text-gray-500 italic">No menu</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           ))}
         </div>
       </div>
+
+      <div className="h-8" />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix default Leaflet marker icon
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "/leaflet/marker-icon-2x.png",
@@ -215,6 +214,20 @@ export default function HomePage() {
     return <Marker position={position} draggable={true} eventHandlers={eventHandlers} />;
   }
 
+  // ------------------ Render Stars ------------------
+  function renderStars(rating) {
+    const roundedRating = Math.min(5, Math.max(0, Math.round(rating * 2) / 2));
+    const filledStars = Math.floor(roundedRating);
+    const halfStar = roundedRating % 1 !== 0;
+    const emptyStars = 5 - filledStars - (halfStar ? 1 : 0);
+
+    let stars = "★".repeat(filledStars);
+    if (halfStar) stars += "★"; // can replace with half-star character if desired
+    stars += "☆".repeat(emptyStars);
+
+    return stars;
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     sessionStorage.removeItem("locationPopupShown");
@@ -294,12 +307,13 @@ export default function HomePage() {
       <div className="mt-6 px-4 flex gap-4 overflow-x-auto w-full">
         {categories.map((cat) => (
           <div
-            key={cat.id}
-            className={`flex flex-col items-center flex-shrink-0 cursor-pointer ${
-              selectedCategory === cat.id ? "opacity-80" : "opacity-100"
-            }`}
-            onClick={() => handleCategoryClick(cat.id)}
-          >
+              key={cat.id}
+              className={`relative flex-shrink-0 cursor-pointer w-40 h-12 sm:h-12 rounded-full overflow-hidden shadow-md
+                ${selectedCategory === cat.id ? "ring-2 ring-yellow-400 opacity-90" : "opacity-100"}
+                transition-all duration-200 ease-in-out
+              `}
+              onClick={() => handleCategoryClick(cat.id)}
+            >
             <div
               className={`rounded-lg border-b-4 ${
                 selectedCategory === cat.id
@@ -309,38 +323,69 @@ export default function HomePage() {
             >
               <img
                 src={cat.image_url || "/images/default-category.png"}
-                className="w-18 h-18 sm:w-24 sm:h-20 object-cover rounded-lg"
+                className="w-full h-18 sm:w-full sm:h-20 object-cover rounded-lg"
               />
             </div>
-            <p className="text-xs sm:text-sm mt-1 text-center">{cat.name}</p>
+            <div className="absolute inset-0 flex items-center justify-center bg-opacity-30 rounded-full">
+          <p className="style-neuton absolute inset-0 flex items-center justify-center font-bold 
+                  text-s sm:text-sm text-black uppercase 
+                  [text-shadow:_-1px_-1px_0_white,_1px_-1px_0_white,_-1px_1px_0_white,_1px_1px_0_white]">
+            {cat.name}
+          </p>
+        </div>
           </div>
         ))}
       </div>
 
-      {/* RESTAURANTS */}
-      <div className="mt-4 px-4 flex flex-col">
-        <h2 className="text-xl sm:text-[32px] text-black mb-2 mt-1">Restaurants</h2>
+ {/* RESTAURANTS */}
+<div className="mt-4 px-4 flex flex-col">
+  <h2 className="style-neuton text-[25px] sm:text-2xl md:text-[38px] text-black mb-4 mt-1 font-regular">Recommended for You</h2>
 
-        <div className="grid grid-cols-2 gap-3 pb-24 cursor-pointer">
-          {filteredRestaurants.map((r) => (
-            <div
-              key={r.id}
-              onClick={() => navigate(`/restaurant/${r.id}`)}
-              className="bg-[#FFFAE2] border border-[#FCE8D8] rounded-2xl shadow-md p-3"
-            >
-              <img
-                src={r.image_url || "/images/default-food.png"}
-                className="w-full h-40 object-cover rounded-lg"
-              />
-              <p className="font-bold text-[22px] mt-2">{r.name}</p>
-              <p className="text-[14px] text-gray-600">{r.address}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {r.distance.toFixed(2)} km away
-              </p>
-            </div>
-          ))}
+  <div className="space-y-4 pb-24 cursor-pointer">
+    {filteredRestaurants.map((r) => (
+      <div
+        key={r.id}
+        onClick={() => navigate(`/restaurant/${r.id}`)}
+        className="bg-white rounded-2xl border border-t-[#FCE8D8] border-[#CFB53C] drop-shadow-[0_6px_2px_#CFB53C] p-3 flex gap-3 w-full cursor-pointer"
+      >
+        {/* Restaurant Image */}
+        <img
+          src={r.image_url || "/images/default-food.png"}
+          alt={r.name}
+          className="w-38 h-30 sm:w-32 sm:h-32 md:w-96 md:h-36 object-cover rounded-2xl border-b-2 border-[#FFC533] shadow-sm flex-shrink-0"
+        />
+
+        <div className="flex flex-col flex-grow">
+          {/* Restaurant Name */}
+          <h3 className="font-semibold text-[18px] sm:text-[20px] md:text-[28px] style-neuton leading-tight">
+            {r.name}
+          </h3>
+
+          {/* Address */}
+          <p className="text-black text-[10px] sm:text-[14px] md:text-[15px] mt-1 style-poppins">
+            Address: {r.address}
+          </p>
+
+          <div className="flex items-center gap-2 mt-2">
+            {/* Rating */}
+<p className="text-[#FFC533] text-[16px] sm:text-[18px] md:text-[20px] font-medium">
+  {renderStars(r.overall_rating || 0)}
+</p>
+            {/* Reviews Button */}
+            <span className="bg-[#CFB53C] text-black px-2 py-[1px] rounded-full text-[12px] sm:text-[14px] md:text-[14px]">
+              reviews
+            </span>
+
+            {/* Distance Info */}
+            <p className="text-[10px] sm:text-[12px] md:text-[14px] ml-auto">
+              {r.distance.toFixed(2)} km away
+            </p>
+          </div>
         </div>
       </div>
+    ))}
+  </div>
+</div>
 
       {/* NAVIGATION */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border border-[#CFB53C] rounded-t-lg shadow-md flex justify-around items-center py-3">

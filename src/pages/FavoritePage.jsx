@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import {  House, Menu, MapPin, Heart, CircleUserRound, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react"; 
+import { House, Menu, MapPin, Heart, CircleUserRound, Trash2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router";
 
@@ -11,59 +11,43 @@ export default function FavoritePage() {
     fetchFavorites();
   }, []);
 
-  // -----------------------------
-  // HELPER FUNCTION: RENDER STARS WITH HALF STARS
-  // -----------------------------
+  // ⭐ Render stars with half stars
   const renderStars = (rating) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
-      if (rating >= i) {
-        stars.push(<span key={i} className="text-yellow-400 text-[20px]">★</span>); // full star
-      } else if (rating + 0.5 >= i) {
-        stars.push(<span key={i} className="text-yellow-400 text-[20px]">⯨</span>); // half star (can replace with SVG)
-      } else {
-        stars.push(<span key={i} className="text-gray-300 text-sm">☆</span>); // empty star
-      }
+      if (rating >= i) stars.push(<span key={i} className="text-yellow-400 text-[20px]">★</span>);
+      else if (rating + 0.5 >= i) stars.push(<span key={i} className="text-yellow-400 text-[20px]">⯨</span>);
+      else stars.push(<span key={i} className="text-gray-300 text-[20px]">☆</span>);
     }
     return stars;
   };
 
-  // -----------------------------
-  // FETCH FAVORITES WITH AVERAGE RATINGS
-  // -----------------------------
+  // ⭐ Fetch favorite restaurants
   async function fetchFavorites() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Fetch favorites and include menu items and their reviews
     const { data, error } = await supabase
       .from("favorites")
       .select(`
         id,
-        menu_item_id,
-        menu_items (
+        restaurants (
           id,
           name,
-          price,
-          discount,
+          address,
           image_url,
-          restaurant_id,
-          restaurants (
-            id,
-            name
-          ),
-          menu_item_reviews ( rating )
+          overall_rating,
+          rating_count
         )
       `)
       .eq("user_id", user.id);
 
     if (error) return console.error("Fetch favorites error:", error);
 
-    // Compute average rating for each menu item
     const favoritesWithRating = (data || []).map(fav => {
-      const reviews = fav.menu_items.menu_item_reviews || [];
-      const avgRating = reviews.length
-        ? reviews.reduce((sum, r) => sum + parseFloat(r.rating), 0) / reviews.length
+      const restaurant = fav.restaurants;
+      const avgRating = restaurant.rating_count
+        ? restaurant.overall_rating / restaurant.rating_count
         : 0;
       return { ...fav, avgRating };
     });
@@ -71,36 +55,39 @@ export default function FavoritePage() {
     setFavorites(favoritesWithRating);
   }
 
-  // -----------------------------
-  // DELETE FAVORITE
-  // -----------------------------
+  // ⭐ Delete favorite
   async function deleteFavorite(favoriteId) {
     await supabase.from("favorites").delete().eq("id", favoriteId);
-    fetchFavorites(); // reload UI
+    fetchFavorites();
   }
 
+  // ⭐ Get restaurant image URL
+  const getImageUrl = (path) => {
+    if (!path) return "/places/placeholder.png";
+    if (path.startsWith("http")) return path;
+    return `https://ajvlsivsfmtpaogjzaco.supabase.co/storage/v1/object/public/restaurant-images/${path}`;
+  };
+
   return (
-    <div className="w-full min-h-screen bg-[#FFF9E8] pb-24 overflow-x-hidden">
+    <div className="w-full min-h-screen bg-[#FFF9E8] pb-28 overflow-x-hidden">
       {/* HEADER */}
       <div className="bg-[#FFC533] h-48 rounded-b-3xl p-5 relative flex flex-col justify-between">
         <div className="flex justify-between items-start pt-2">
-          <div className="w-28 h-28 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-md ml-65 sm:ml-280">
+          <div className="w-28 h-28 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-md ml-65 sm:ml-20">
             <img src="secondary-logo.png" alt="Foodie Finder" className="w-full h-full object-contain" />
           </div>
         </div>
-
-        <h1 className="text-[54px] font-['Neuton',sans-serif] -mt-6">Favorites</h1>
+        <h1 className="text-[54px] sm:text-[36px] font-['Neuton',sans-serif] -mt-6">Favorites</h1>
       </div>
 
-      {/* FAVORITE ITEMS LIST */}
-      <div className="mt-6 space-y-5 pb-20 ml-60 max-[1024px]:ml-20 max-[768px]:ml-5">
+      {/* FAVORITE RESTAURANTS LIST */}
+      <div className="mt-6 space-y-5 pb-20 ml-60 max-[1024px]:ml-20 max-[768px]:ml-10 max-[480px]:ml-5">
         {favorites.length === 0 && (
           <p className="text-center text-gray-600 text-xl mt-10">No favorites yet.</p>
         )}
 
         {favorites.map((fav) => {
-          const item = fav.menu_items;
-          const restaurant = item.restaurants;
+          const restaurant = fav.restaurants;
           const rating = fav.avgRating || 0;
 
           return (
@@ -115,45 +102,29 @@ export default function FavoritePage() {
             >
               {/* FLOATING IMAGE */}
               <img
-                src={item.image_url}
-                alt={item.name}
-                className=" bg-white
+                src={getImageUrl(restaurant.image_url)}
+                alt={restaurant.name}
+                className="
                   absolute top-1/2 left-0 transform 
                   -translate-x-1/2 -translate-y-1/2 
-                  w-38 h-38 object-cover rounded-full shadow-xl 
-                  max-[640px]:w-28 max-[640px]:h-28
-                  max-[480px]:w-24 max-[480px]:h-24 max-[480px]:left-7  
-                  max-[400px]:w-20 max-[400px]:h-20
+                   w-30 h-34 sm:w-38 sm:h-35 md:w-65 md:h-32 ml-10 sm:ml-15 md:ml-1 object-cover rounded-2xl border-b-3 border-[#CFB53C] shadow-lg flex-shrink-0
                 "
               />
 
               {/* CARD CONTENT */}
               <div className="flex-1 pr-14 flex flex-col justify-center max-[480px]:pr-10">
-                <p className="font-['Neuton',sans-serif] font-semibold text-[30px] text-black leading-tight max-[480px]:text-[24px]">
-                  {item.name}
+                <p className="font-['Neuton',sans-serif] font-semibold text-[30px] sm:text-[22px] text-black leading-tight max-[480px]:text-[20px] ml-10 sm:ml-10 md:ml-8">
+                  {restaurant.name}
                 </p>
 
-                <p className="text-gray-700 style-poppins text-[20px] font-regular -mt-1 ml-5 max-[480px]:text-[16px]">
-                  - {restaurant?.name}
+                <p className="text-gray-700 style-poppins text-[20px] sm:text-[16px] font-regular -mt-1 ml-11 sm:ml-10 md:ml-10 max-[480px]:text-[14px]">
+                  {restaurant.address}
                 </p>
 
-                {/* ⭐ STAR RATING WITH HALF STAR */}
-                <p className="text-yellow-500 text-sm font-semibold mb-3">
+                {/* ⭐ STAR RATING */}
+                <p className="text-yellow-500 text-sm font-semibold mb-3 ml-9 sm:ml-10 md:ml-8">
                   {renderStars(rating)}
                 </p>
-
-                {/* PRICE ROW */}
-                <div className="style-neuton text-[20px] flex items-center mt-2 space-x-2 max-[480px]:text-[16px]">
-                  <p className="font-bold text-xl text-black max-[480px]:text-lg">
-                    ₱ {item.price}
-                  </p>
-
-                  {item.discount > 0 && (
-                    <span className="bg-[#CFB53C] text-xs font-bold px-2 py-1 rounded-full text-black">
-                      ₱ {item.discount} off
-                    </span>
-                  )}
-                </div>
               </div>
 
               {/* DELETE BUTTON */}
@@ -178,13 +149,10 @@ export default function FavoritePage() {
         <button onClick={() => navigate("/homepage")} className="text-black hover:text-[#FFC533]">
           <House size={26} />
         </button>
-        <button onClick={() => navigate("/categoriespage")} className="text-black hover:text-[#FFC533]">
-          <Menu size={22} />
-        </button>
         <button onClick={() => navigate("/locationpage")} className="text-black hover:text-[#FFC533]">
           <MapPin size={26} />
         </button>
-        <button onClick={() => navigate("/favoritepage")} className="text-[#FFC533] hover:text-black fill-amber-300">
+        <button onClick={() => navigate("/favoritepage")} className="text-[#FFC533] hover:text-black">
           <Heart size={26} />
         </button>
         <button onClick={() => navigate("/profilepage")} className="text-black hover:text-[#FFC533]">
