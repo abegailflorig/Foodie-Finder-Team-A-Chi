@@ -91,10 +91,15 @@ export default function RestaurantPage() {
     if (!mapInstance.current) {
       mapInstance.current = L.map(mapRef.current, { zoomControl: false, attributionControl: false }).setView([lat, lng], 14);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapInstance.current);
+
+
+
+
     } else {
       mapInstance.current.setView([lat, lng], 14);
     }
 
+    // Remove old markers
     mapInstance.current.eachLayer((layer) => {
       if (layer instanceof L.Marker) mapInstance.current.removeLayer(layer);
     });
